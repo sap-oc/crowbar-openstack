@@ -742,6 +742,7 @@ root_helper=sudo neutron-rootwrap /etc/neutron/rootwrap.conf
 
 # Root helper daemon application to use when possible.
 # root_helper_daemon =
+root_helper_daemon = sudo neutron-rootwrap-daemon /etc/neutron/rootwrap.conf
 
 # Use the root helper when listing the namespaces on a system. This may not
 # be required depending on the security configuration. If the root helper is
