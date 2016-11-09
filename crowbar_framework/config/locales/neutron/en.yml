@@ -135,4 +135,3 @@ en:
         dvr_requires_l2: 'DVR with GRE or VXLAN requires L2 population'
         dvr_vmware: 'DVR is not compatible with VMware NSX plugin'
         dvr_linuxbridge: 'DVR is not compatible with Linux Bridge ML2 driver'
-        dvr_ha: 'DVR is not compatible with High Availability for neutron-network'
