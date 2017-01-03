@@ -70,8 +70,7 @@ else
 end
 
 unless manila_ui_pkgname.nil?
-  manila_servers = search(:node, "roles:manila-server") || []
-  unless manila_servers.empty?
+  unless Barclamp::Config.load("openstack", "manila").empty?
     package manila_ui_pkgname do
       action :install
       notifies :reload, resources(service: "apache2")
