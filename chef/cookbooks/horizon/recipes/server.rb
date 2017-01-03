@@ -192,8 +192,10 @@ glance_insecure = Barclamp::Config.load("openstack", "glance")["insecure"] || fa
 cinder_insecure = Barclamp::Config.load("openstack", "cinder")["insecure"] || false
 neutron_insecure = Barclamp::Config.load("openstack", "neutron")["insecure"] || false
 nova_insecure = Barclamp::Config.load("openstack", "nova")["insecure"] || false
+ceilometer_insecure = Barclamp::Config.load("openstack", "ceilometer")["insecure"] || false
 heat_insecure = Barclamp::Config.load("openstack", "heat")["insecure"] || false
 manila_insecure = Barclamp::Config.load("openstack", "manila")["insecure"] || false
+trove_insecure = Barclamp::Config.load("openstack", "trove")["insecure"] || false
 
 neutrons = search(:node, "roles:neutron-server") || []
 if neutrons.length > 0
@@ -281,7 +283,15 @@ template local_settings do
   variables(
     debug: node[:horizon][:debug],
     keystone_settings: keystone_settings,
-    insecure: keystone_settings["insecure"] || glance_insecure || cinder_insecure || neutron_insecure || nova_insecure,
+    insecure: keystone_settings["insecure"] \
+    || glance_insecure \
+    || cinder_insecure \
+    || neutron_insecure \
+    || nova_insecure \
+    || ceilometer_insecure \
+    || heat_insecure \
+    || manila_insecure \
+    || trove_insecure \
     db_settings: db_settings,
     enable_lb: neutron_use_lbaas,
     enable_vpn: neutron_use_vpnaas,
