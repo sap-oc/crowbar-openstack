@@ -28,11 +28,17 @@
               "type": "map",
               "required": false,
               "mapping": {
+                "config_pgtune": {
+                  "type": "map",
+                  "required": false,
+                  "mapping": {
+                    "max_connections": { "type": "int" }
+                  }
+                },
                 "config": {
                   "type": "map",
                   "required": false,
                   "mapping": {
-                    "max_connections": { "type": "int" },
                     "log_truncate_on_rotation": { "type": "bool" },
                     "log_filename": {"type": "str" }
                   }
