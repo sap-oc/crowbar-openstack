@@ -8,6 +8,7 @@
       "password": "",
       "user": "nova",
       "vhost": "/nova",
+      "cluster": true,
       "ha": {
         "storage": {
           "mode": "shared",
@@ -33,7 +34,7 @@
     "rabbitmq": {
       "crowbar-revision": 0,
       "crowbar-applied": false,
-      "schema-revision": 11,
+      "schema-revision": 12,
       "element_states": {
         "rabbitmq-server": [ "readying", "ready", "applying" ]
       },
