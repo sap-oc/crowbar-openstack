@@ -290,6 +290,7 @@ unless %w(disabled manual).include? node[:pacemaker][:stonith][:mode]
   end
 end
 
+rabbit_settings = fetch_rabbitmq_settings
 crowbar_pacemaker_order_only_existing "o-#{evacuate_primitive}" do
   # We need services required to boot an instance; most of these services are
   # obviously required. Some additional notes:
@@ -297,7 +298,7 @@ crowbar_pacemaker_order_only_existing "o-#{evacuate_primitive}" do
   #  - cinder is used in case of boot from volume
   #  - neutron agents are used even with DVR, if only to have a DHCP server for
   #    the instance to get an IP address
-  ordering "( postgresql rabbitmq cl-keystone cl-swift-proxy cl-g-glance cl-g-cinder-controller cl-neutron-server cl-g-neutron-agents cl-g-nova-controller ) #{evacuate_primitive}"
+  ordering "( postgresql #{rabbit_settings[:pacemaker_resource]} cl-keystone cl-swift-proxy cl-g-glance cl-g-cinder-controller cl-neutron-server cl-g-neutron-agents cl-g-nova-controller ) #{evacuate_primitive}"
   score "Mandatory"
   action :create
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }

@@ -29,6 +29,7 @@ crowbar_pacemaker_sync_mark "sync-neutron_before_ha"
 # Avoid races when creating pacemaker resources
 crowbar_pacemaker_sync_mark "wait-neutron_ha_resources"
 
+rabbit_settings = fetch_rabbitmq_settings
 transaction_objects = []
 
 primitive_name = "neutron-server"
@@ -63,7 +64,7 @@ pacemaker_transaction "neutron server" do
 end
 
 crowbar_pacemaker_order_only_existing "o-#{clone_name}" do
-  ordering ["postgresql", "rabbitmq", "cl-keystone", clone_name]
+  ordering ["postgresql", "#{rabbit_settings[:pacemaker_resource]}", "cl-keystone", clone_name]
   score "Optional"
   action :create
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }

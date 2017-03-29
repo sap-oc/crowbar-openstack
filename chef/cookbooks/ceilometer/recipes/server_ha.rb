@@ -29,6 +29,7 @@ crowbar_pacemaker_sync_mark "sync-ceilometer_server_before_ha"
 # Avoid races when creating pacemaker resources
 crowbar_pacemaker_sync_mark "wait-ceilometer_server_ha_resources"
 
+rabbit_settings = fetch_rabbitmq_settings
 transaction_objects = []
 primitives = []
 
@@ -66,7 +67,7 @@ pacemaker_clone clone_name do
 end
 transaction_objects << "pacemaker_clone[#{clone_name}]"
 
-order_only_existing = ["rabbitmq", "cl-keystone", clone_name]
+order_only_existing = ["#{rabbit_settings[:pacemaker_resource]}", "cl-keystone", clone_name]
 
 if node[:ceilometer][:use_mongodb]
   pacemaker_order "o-ceilometer-mongo" do

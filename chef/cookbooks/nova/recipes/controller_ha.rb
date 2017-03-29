@@ -83,6 +83,7 @@ crowbar_pacemaker_sync_mark "sync-nova_before_ha"
 # Avoid races when creating pacemaker resources
 crowbar_pacemaker_sync_mark "wait-nova_ha_resources"
 
+rabbit_settings = fetch_rabbitmq_settings
 transaction_objects = []
 primitives = []
 
@@ -143,7 +144,7 @@ pacemaker_transaction "nova controller" do
 end
 
 crowbar_pacemaker_order_only_existing "o-#{clone_name}" do
-  ordering ["postgresql", "rabbitmq", "cl-keystone", clone_name]
+  ordering ["postgresql", "#{rabbit_settings[:pacemaker_resource]}", "cl-keystone", clone_name]
   score "Optional"
   action :create
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }

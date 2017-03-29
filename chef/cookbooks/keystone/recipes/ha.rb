@@ -44,6 +44,7 @@ if node[:keystone][:frontend] == "native"
   # then we will avoid races there too as pacemaker will start the service).
   crowbar_pacemaker_sync_mark "wait-keystone_ha_resources"
 
+  rabbit_settings = fetch_rabbitmq_settings
   transaction_objects = []
 
   service_name = "keystone"
@@ -85,7 +86,7 @@ if node[:keystone][:frontend] == "native"
   end
 
   crowbar_pacemaker_order_only_existing "o-#{clone_name}" do
-    ordering ["postgresql", "rabbitmq", clone_name]
+    ordering ["postgresql", "#{rabbit_settings[:pacemaker_resource]}", clone_name]
     score "Optional"
     action :create
     only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }

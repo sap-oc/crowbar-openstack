@@ -46,6 +46,7 @@ crowbar_pacemaker_sync_mark "sync-heat_before_ha"
 crowbar_pacemaker_sync_mark "wait-heat_ha_resources"
 
 primitives = []
+rabbit_settings = fetch_rabbitmq_settings
 transaction_objects = []
 
 ["engine", "api", "api_cfn", "api_cloudwatch"].each do |service|
@@ -92,7 +93,7 @@ pacemaker_transaction "heat server" do
 end
 
 crowbar_pacemaker_order_only_existing "o-#{clone_name}" do
-  ordering ["postgresql", "rabbitmq", "cl-keystone", "cl-g-nova-controller", clone_name]
+  ordering ["postgresql", "#{rabbit_settings[:pacemaker_resource]}", "cl-keystone", "cl-g-nova-controller", clone_name]
   score "Optional"
   action :create
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }

@@ -41,6 +41,7 @@ crowbar_pacemaker_sync_mark "sync-cinder_before_ha"
 # Avoid races when creating pacemaker resources
 crowbar_pacemaker_sync_mark "wait-cinder_ha_resources"
 
+rabbit_settings = fetch_rabbitmq_settings
 transaction_objects = []
 
 api_primitive = "cinder-api"
@@ -92,7 +93,7 @@ pacemaker_transaction "cinder controller" do
 end
 
 crowbar_pacemaker_order_only_existing "o-#{clone_name}" do
-  ordering ["postgresql", "rabbitmq", "cl-keystone", clone_name]
+  ordering ["postgresql", "#{rabbit_settings[:pacemaker_resource]}", "cl-keystone", clone_name]
   score "Optional"
   action :create
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
