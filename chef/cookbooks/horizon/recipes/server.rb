@@ -70,8 +70,7 @@ else
 end
 
 unless manila_ui_pkgname.nil?
-  manila_servers = search(:node, "roles:manila-server") || []
-  unless manila_servers.empty?
+  unless Barclamp::Config.load("openstack", "manila").empty?
     package manila_ui_pkgname do
       action :install
       notifies :reload, resources(service: "apache2")
@@ -189,26 +188,18 @@ db_settings = {
 
 keystone_settings = KeystoneHelper.keystone_settings(node, @cookbook_name)
 
-glances = search(:node, "roles:glance-server") || []
-if glances.length > 0
-  glance = glances[0]
-  glance_insecure = glance[:glance][:api][:protocol] == "https" && glance[:glance][:ssl][:insecure]
-else
-  glance_insecure = false
-end
-
-cinders = search(:node, "roles:cinder-controller") || []
-if cinders.length > 0
-  cinder = cinders[0]
-  cinder_insecure = cinder[:cinder][:api][:protocol] == "https" && cinder[:cinder][:ssl][:insecure]
-else
-  cinder_insecure = false
-end
+glance_insecure = Barclamp::Config.load("openstack", "glance")["insecure"] || false
+cinder_insecure = Barclamp::Config.load("openstack", "cinder")["insecure"] || false
+neutron_insecure = Barclamp::Config.load("openstack", "neutron")["insecure"] || false
+nova_insecure = Barclamp::Config.load("openstack", "nova")["insecure"] || false
+ceilometer_insecure = Barclamp::Config.load("openstack", "ceilometer")["insecure"] || false
+heat_insecure = Barclamp::Config.load("openstack", "heat")["insecure"] || false
+manila_insecure = Barclamp::Config.load("openstack", "manila")["insecure"] || false
+trove_insecure = Barclamp::Config.load("openstack", "trove")["insecure"] || false
 
 neutrons = search(:node, "roles:neutron-server") || []
 if neutrons.length > 0
   neutron = neutrons[0]
-  neutron_insecure = neutron[:neutron][:api][:protocol] == "https" && neutron[:neutron][:ssl][:insecure]
   if neutron[:neutron][:networking_plugin] == "ml2"
     neutron_ml2_type_drivers = neutron[:neutron][:ml2_type_drivers]
   else
@@ -217,14 +208,10 @@ if neutrons.length > 0
   neutron_use_lbaas = neutron[:neutron][:use_lbaas]
   neutron_use_vpnaas = neutron[:neutron][:use_vpnaas]
 else
-  neutron_insecure = false
   neutron_ml2_type_drivers = "'*'"
   neutron_use_lbaas = false
   neutron_use_vpnaas = false
 end
-
-nova = get_instance("roles:nova-controller")
-nova_insecure = (nova[:nova][:ssl][:enabled] && nova[:nova][:ssl][:insecure]) rescue false
 
 # We're going to use memcached as a cache backend for Django
 
@@ -296,7 +283,15 @@ template local_settings do
   variables(
     debug: node[:horizon][:debug],
     keystone_settings: keystone_settings,
-    insecure: keystone_settings["insecure"] || glance_insecure || cinder_insecure || neutron_insecure || nova_insecure,
+    insecure: keystone_settings["insecure"] \
+    || glance_insecure \
+    || cinder_insecure \
+    || neutron_insecure \
+    || nova_insecure \
+    || ceilometer_insecure \
+    || heat_insecure \
+    || manila_insecure \
+    || trove_insecure \
     db_settings: db_settings,
     enable_lb: neutron_use_lbaas,
     enable_vpn: neutron_use_vpnaas,

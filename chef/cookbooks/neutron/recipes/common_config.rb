@@ -95,7 +95,7 @@ nova_notify = {}
 unless nova[:nova].nil? or nova[:nova][:ssl].nil?
   nova_api_host = CrowbarHelper.get_host_for_admin_url(nova, (nova[:nova][:ha][:enabled] rescue false))
   nova_api_protocol = nova[:nova][:ssl][:enabled] ? "https" : "http"
-  nova_insecure = keystone_settings["insecure"] || (nova[:nova][:ssl][:enabled] && nova[:nova][:ssl][:insecure])
+  nova_insecure = Barclamp::Config.load("openstack", "nova")["insecure"] || false
 
   nova_notify = {
     nova_url: "#{nova_api_protocol}://#{nova_api_host}:#{nova[:nova][:ports][:api]}/v2",
