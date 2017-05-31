@@ -78,6 +78,11 @@
                 %span.help-block
                   = t(".volumes.netapp.nfs_shares_config_hint")
 
+                = string_field %w(volumes {{@index}} netapp nfs_mount_options)
+
+                %span.help-block
+                  = t(".volumes.netapp.nfs_mount_options_config_hint")
+
           {{/if_eq}}
           {{#if_eq backend_driver 'emc'}}
           %li.list-group-item

@@ -1645,6 +1645,9 @@ nfs_shares_config=/etc/cinder/nfs_shares-<%= backend_id %>
 # Mount options passed to the nfs client. See section of the nfs man page for
 # details. (string value)
 #nfs_mount_options = <None>
+<% if volume["netapp"]["nfs_mount_options"] -%>
+nfs_mount_options = <%= volume["netapp"]["nfs_mount_options"] %>
+<% end -%>
 
 # The number of attempts to mount nfs shares before raising an error.  At least
 # one attempt will be made to mount an nfs share, regardless of the value
