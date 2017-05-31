@@ -613,7 +613,7 @@ notification_driver = neutron.openstack.common.notifier.rpc_notifier
 # A URL representing the messaging driver to use and its full
 # configuration. If not set, we fall back to the rpc_backend
 # option and driver specific configuration. (string value)
-# transport_url=
+transport_url = <%= @rabbit_settings[:url] %>
 
 # The messaging driver to use, defaults to rabbit. Other
 # drivers include qpid and zmq. (string value)
