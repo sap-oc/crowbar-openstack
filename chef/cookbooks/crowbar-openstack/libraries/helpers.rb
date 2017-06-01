@@ -131,6 +131,7 @@ class CrowbarOpenStackHelper
           @rabbitmq_settings[instance] = {
             ha_queues: true,
             durable_queues: true,
+            use_legacy_configuration: false,
             url: "rabbit://#{rabbit_hosts.sort.join(",")}/" \
               "#{rabbits.first[:rabbitmq][:vhost]}",
             pacemaker_resource: "ms-rabbitmq"
@@ -143,6 +144,12 @@ class CrowbarOpenStackHelper
           @rabbitmq_settings[instance] = {
             ha_queues: false,
             durable_queues: false,
+            use_legacy_configuration: true,
+            address: rabbit[:rabbitmq][:address],
+            port: rabbit[:rabbitmq][:port],
+            user: rabbit[:rabbitmq][:user],
+            password: rabbit[:rabbitmq][:password],
+            vhost: rabbit[:rabbitmq][:vhost],
             url: "rabbit://#{rabbit[:rabbitmq][:user]}:" \
               "#{rabbit[:rabbitmq][:password]}@" \
               "#{rabbit[:rabbitmq][:address]}:#{port}/" \
