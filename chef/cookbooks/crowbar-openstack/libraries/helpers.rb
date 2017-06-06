@@ -119,7 +119,7 @@ class CrowbarOpenStackHelper
       else
         one_rabbit = rabbits.first
 
-        if rabbits.first[:rabbitmq][:cluster]
+        if one_rabbit[:rabbitmq][:cluster]
           rabbit_hosts = rabbits.map do |rabbit|
             port = rabbit[:rabbitmq][:port]
 
@@ -133,7 +133,7 @@ class CrowbarOpenStackHelper
             durable_queues: true,
             use_legacy_configuration: false,
             url: "rabbit://#{rabbit_hosts.sort.join(",")}/" \
-              "#{rabbits.first[:rabbitmq][:vhost]}",
+              "#{one_rabbit[:rabbitmq][:vhost]}",
             pacemaker_resource: "ms-rabbitmq"
           }
           Chef::Log.info("RabbitMQ cluster found")
