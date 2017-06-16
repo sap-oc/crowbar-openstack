@@ -128,13 +128,21 @@ class CrowbarOpenStackHelper
             "#{rabbit[:rabbitmq][:address]}:#{port}"
           end
 
+          rabbit_node_names = rabbits.map do |rabbit_node|
+            "\'rabbit@#{rabbit_node.name}\'"
+          end
+
+          cluster_nodes = rabbit_node_names.join(",")
+
           @rabbitmq_settings[instance] = {
+            clustered: true,
             ha_queues: true,
             durable_queues: true,
             use_legacy_configuration: false,
             url: "rabbit://#{rabbit_hosts.sort.join(",")}/" \
               "#{one_rabbit[:rabbitmq][:vhost]}",
-            pacemaker_resource: "ms-rabbitmq"
+            pacemaker_resource: "ms-rabbitmq",
+            cluster_nodes: cluster_nodes
           }
           Chef::Log.info("RabbitMQ cluster found")
         else
@@ -142,6 +150,7 @@ class CrowbarOpenStackHelper
           port = rabbit[:rabbitmq][:port]
 
           @rabbitmq_settings[instance] = {
+            clustered: false,
             ha_queues: false,
             durable_queues: false,
             use_legacy_configuration: true,
