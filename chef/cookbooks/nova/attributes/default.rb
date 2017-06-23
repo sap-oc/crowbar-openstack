@@ -147,3 +147,8 @@ default[:nova][:ha][:compute][:fence][:op][:monitor][:interval] = "10m"
 #
 default[:nova][:block_device][:allocate_retries] = 60
 default[:nova][:block_device][:allocate_retries_interval] = 3
+
+#
+# Libvirt Driver Options
+#
+default[:nova][:libvirt_nfs_mount_options] = ""

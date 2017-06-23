@@ -124,7 +124,8 @@
                 "allocate_retries": { "type": "number", "required" : true },
                 "allocate_retries_interval": { "type": "number", "required" : true }
               }
-            }
+            },
+            "libvirt_nfs_mount_options": { "type": "str", "required": false }
           }
         }
       }

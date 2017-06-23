@@ -336,7 +336,8 @@ template "/etc/nova/nova.conf" do
             ssl_ca_file: api_ssl_cafile,
             oat_appraiser_host: oat_server[:hostname],
             oat_appraiser_port: "8443",
-            has_itxt: has_itxt
+            has_itxt: has_itxt,
+            libvirt_nfs_mount_options: node[:nova][:libvirt_nfs_mount_options]
             )
 end
 

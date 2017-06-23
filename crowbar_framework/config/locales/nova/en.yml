@@ -41,6 +41,8 @@ en:
         kvm_header: 'KVM Options'
         kvm:
           ksm_enabled: 'Enable Kernel Samepage Merging'
+        libvirt_header: 'Libvirt Driver Options'
+        libvirt_nfs_mount_options: 'NFS mount options for Cinder volumes (like vers=3)'
         vmware_header: 'VMware vCenter Settings'
         vcenter:
           host: 'vCenter Host/IP Address'
