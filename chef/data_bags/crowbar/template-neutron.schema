@@ -16,9 +16,13 @@
                     "keystone_instance": { "type": "str", "required": true },
                     "create_default_networks": { "type": "bool", "required": true },
                     "dhcp_domain": { "type": "str", "required": true },
+                    "rpc_workers": { "type": "int", "required": true },
                     "use_lbaas": { "type": "bool", "required": true },
                     "lbaasv2_driver": { "type": "str", "required": true },
                     "use_l2pop": { "type": "bool", "required": true },
+                    "l2pop": { "type": "map", "required": true, "mapping": {
+                      "agent_boot_time": { "type" : "int", "required" : true }
+                    }},
                     "use_dvr": { "type": "bool", "required": true },
                     "additional_external_networks": { "type": "seq", "required": true, "sequence": [ { "type": "str" } ] },
                     "networking_plugin": { "type": "str", "required": true },
@@ -102,6 +106,10 @@
                       "controllers": { "type" : "str", "required" : true },
                       "tz_uuid": { "type" : "str", "required" : true },
                       "l3_gw_uuid": { "type" : "str", "required" : true }
+                    }},
+                    "vmware_dvs": { "type": "map", "required": true, "mapping": {
+                      "clean_on_restart": { "type" : "bool", "required" : true },
+                      "precreate_networks": { "type" : "bool", "required" : true }
                     }},
                     "zvm": { "type": "map", "required": true, "mapping": {
                       "zvm_xcat_server": { "type": "str", "required": true },

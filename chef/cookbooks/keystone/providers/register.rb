@@ -84,6 +84,61 @@ action :add_tenant do
   end
 end
 
+# :add_domain specific attributes
+# attribute :tenant_name, :kind_of => String
+action :add_domain do
+  http, headers = _build_connection(new_resource)
+
+  # Construct the path
+  path = "/v3/domains"
+  dir = "domains"
+
+  # Lets verify that the domain does not exist yet
+  item_id, error = _find_id(http, headers, new_resource.domain_name, path, dir)
+  if item_id || error
+    raise "Failed to talk to keystone in add_domain" if error
+    Chef::Log.info "Domain '#{new_resource.domain_name}' already exists. Not creating." unless error
+    new_resource.updated_by_last_action(false)
+  else
+    # Domain does not exist yet
+    body = _build_domain_object(new_resource.domain_name)
+    ret = _create_item(http, headers, path, body, new_resource.domain_name)
+    new_resource.updated_by_last_action(ret)
+  end
+end
+
+# :add_domain_role specific attributes
+# attribute :domain_name, :kind_of => String
+# attribute :user_name, :kind_of => String
+# attribute :role_name, :kind_of => String
+action :add_domain_role do
+  http, headers = _build_connection(new_resource)
+
+  # get user_id
+  path = "/v3/users"
+  dir = "users"
+  user_id, uerror = _find_id(http, headers, new_resource.user_name, path, dir)
+  # get role_id
+  path = "/v3/roles"
+  dir = "roles"
+  role_id, rerror = _find_id(http, headers, new_resource.role_name, path, dir)
+  # get domain_id
+  path = "/v3/domains"
+  dir = "domains"
+  domain_id, derror = _find_id(http, headers, new_resource.domain_name, path, dir)
+
+  if uerror || rerror || derror
+    Chef::Log.info "Could not obtain the proper ids from keystone"
+    raise "Failed to talk to keystone in add_domain_role"
+  end
+
+  # Construct the path
+  path = "/v3/domains/#{domain_id}/users/#{user_id}/roles/#{role_id}"
+
+  ret = _update_item(http, headers, path, nil, new_resource.domain_name)
+  new_resource.updated_by_last_action(ret)
+end
+
 # :add_user specific attributes
 # attribute :user_name, :kind_of => String
 # attribute :user_password, :kind_of => String
@@ -219,8 +274,8 @@ action :add_endpoint_template do
   my_service_id, error = _find_id(http, headers, new_resource.endpoint_service, path, dir)
   unless my_service_id
       Chef::Log.error "Couldn't find service #{new_resource.endpoint_service} in keystone"
-      raise "Failed to talk to keystone in add_endpoint_template" if error
       new_resource.updated_by_last_action(false)
+      raise "Failed to talk to keystone in add_endpoint_template" if error
   end
 
   # Construct the path
@@ -279,8 +334,8 @@ action :add_endpoint_template do
               Chef::Log.error("Unable to create endpointTemplate for '#{new_resource.endpoint_service}'")
               Chef::Log.error("Response Code: #{resp.code}")
               Chef::Log.error("Response Message: #{resp.message}")
-              raise "Failed to talk to keystone in add_endpoint_template (2)" if error
               new_resource.updated_by_last_action(false)
+              raise "Failed to talk to keystone in add_endpoint_template (2)" if error
           end
       end
   else
@@ -289,6 +344,63 @@ action :add_endpoint_template do
       Chef::Log.error("Response Message: #{resp.message}")
       new_resource.updated_by_last_action(false)
       raise "Failed to talk to keystone in add_endpoint_template (3)" if error
+  end
+end
+
+action :update_endpoint do
+  http, headers = _build_connection(new_resource)
+
+  path = "/v2.0/OS-KSADM/services"
+  dir = "OS-KSADM:services"
+  my_service_id, error = _find_id(http, headers, new_resource.endpoint_service, path, dir)
+  unless my_service_id
+    Chef::Log.error "Couldn't find service #{new_resource.endpoint_service} in keystone"
+    new_resource.updated_by_last_action(false)
+    raise "Failed to talk to keystone in add_endpoint_template"
+  end
+
+  path = "/v3/endpoints"
+
+  resp = http.request_get(path, headers)
+  if resp.is_a?(Net::HTTPOK)
+    data = JSON.parse(resp.read_body)
+    endpoints = {}
+    data["endpoints"].each do |endpoint|
+      if endpoint["service_id"].to_s == my_service_id.to_s
+        endpoints[endpoint["interface"]] = endpoint
+      end
+    end
+    ["public", "internal", "admin"].each do |interface|
+      if interface == "public"
+        new_url = new_resource.endpoint_publicURL
+      elsif interface == "internal"
+        new_url = new_resource.endpoint_internalURL
+      elsif interface == "admin"
+        new_url = new_resource.endpoint_adminURL
+      end
+      endpoint_template = {}
+      endpoint_template["endpoint"] = {}
+      endpoint_template["endpoint"]["interface"] = interface
+      endpoint_template["endpoint"]["url"] = new_url
+      endpoint_template["endpoint"]["endpoint_id"] = endpoints[interface]["id"]
+      endpoint_template["endpoint"]["service_id"] = endpoints[interface]["service_id"]
+      resp = http.send_request("PATCH",
+                               "#{path}/#{endpoints[interface]["id"]}",
+                               JSON.generate(endpoint_template), headers)
+      if resp.is_a?(Net::HTTPOK)
+        Chef::Log.info("Successfully updated endpoint URL #{interface} #{new_url}")
+      else
+        Chef::Log.error("Unknown response code: #{resp.code}")
+        new_resource.updated_by_last_action(false)
+        raise "Failed to talk to keystone in update_endpoint"
+      end
+    end
+  else
+    Chef::Log.error "Unknown response from Keystone Server"
+    Chef::Log.error("Response Code: #{resp.code}")
+    Chef::Log.error("Response Message: #{resp.message}")
+    new_resource.updated_by_last_action(false)
+    raise "Failed to talk to keystone in add_endpoint_template (3)" if error
   end
 end
 
@@ -323,6 +435,10 @@ def _update_item(http, headers, path, body, name)
     return true
   elsif resp.is_a?(Net::HTTPCreated)
     Chef::Log.info("Created keystone item '#{name}'")
+    return true
+  # several APIs use 204 on v3 as success response
+  elsif resp.is_a?(Net::HTTPNoContent)
+    Chef::Log.info("Created/Updated keystone item #{name}")
     return true
   else
     Chef::Log.error("Unable to updated item '#{name}'")
@@ -473,6 +589,18 @@ def _build_tenant_object(tenant_name)
 end
 
 private
+
+def _build_domain_object(domain_name)
+  svc_obj = {}
+  svc_obj.store("name", domain_name)
+  svc_obj.store("enabled", true)
+  ret = {}
+  ret.store("domain", svc_obj)
+  ret
+end
+
+private
+
 def _build_access_object(role_id, role_name)
   svc_obj = Hash.new
   svc_obj.store("name", role_name)

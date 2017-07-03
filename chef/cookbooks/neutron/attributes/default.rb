@@ -27,6 +27,7 @@ default[:neutron][:config_file] = "/etc/neutron/neutron.conf.d/100-neutron.conf"
 default[:neutron][:lbaas_service_file] = "/etc/neutron/neutron-server.conf.d/100-neutron_service_lbaas.conf"
 default[:neutron][:lbaas_config_file] = "/etc/neutron/neutron.conf.d/110-neutron_lbaas.conf"
 default[:neutron][:l3_agent_config_file] = "/etc/neutron/neutron-l3-agent.conf.d/100-agent.conf"
+default[:neutron][:rpc_workers] = 1
 
 default[:neutron][:db][:database] = "neutron"
 default[:neutron][:db][:user] = "neutron"
@@ -116,6 +117,8 @@ when "suse"
     infoblox_pkgs: ["python-infoblox-client",
                     "openstack-neutron-infoblox",
                     "openstack-neutron-infoblox-ipam-agent"],
+    vmware_vsphere_pkg: "openstack-neutron-vsphere",
+    vmware_vsphere_dvs_agent_pkg: "openstack-neutron-vsphere-dvs-agent",
     user: "neutron",
     group: "neutron",
   }
@@ -157,6 +160,8 @@ when "rhel"
                         "lldpd",
                         "neutron-opflex-agent"],
     infoblox_pkgs: [],
+    vmware_vsphere_pkg: "",
+    vmware_vsphere_dvs_agent_pkg: "",
     user: "neutron",
     group: "neutron",
   }
@@ -197,6 +202,8 @@ else
     cisco_apic_gbp_pkgs: [""],
     cisco_opflex_pkgs: [""],
     infoblox_pkgs: [],
+    vmware_vsphere_pkg: "openstack-neutron-vsphere",
+    vmware_vsphere_dvs_agent_pkg: "openstack-neutron-vsphere-dvs-agent",
     user: "neutron",
     group: "neutron",
   }

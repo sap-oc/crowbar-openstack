@@ -98,7 +98,13 @@ compute_primitives_for_group = []
 compute_primitives_to_clone = []
 compute_transaction_objects = []
 
-if node[:platform_family] == "suse" && node[:platform_version].to_f > 12.1
+# virtlogd service exists since 12.2, make sure nodes have been upgraded already
+# check the version of remote's :platform_version
+old_remote_nodes = remote_nodes.select do |remote_node|
+  remote_node[:platform_version].to_f == 12.1
+end
+
+if node[:platform_family] == "suse" && old_remote_nodes.empty?
   virtlogd_primitive = "virtlogd-compute"
   pacemaker_primitive virtlogd_primitive do
     agent "systemd:virtlogd"
@@ -321,7 +327,7 @@ crowbar_pacemaker_order_only_existing "o-#{evacuate_primitive}" do
   #    the instance to get an IP address
   ordering "( " \
       "postgresql rabbitmq cl-keystone cl-swift-proxy cl-glance-api cl-cinder-api " \
-      "cl-neutron-server cl-neutron-dhcp-agent neutron-l3-agent cl-neutron-metadata-agent " \
+      "cl-neutron-server cl-neutron-dhcp-agent cl-neutron-l3-agent cl-neutron-metadata-agent " \
       "cl-nova-api " \
       ") #{evacuate_primitive}"
   score "Mandatory"

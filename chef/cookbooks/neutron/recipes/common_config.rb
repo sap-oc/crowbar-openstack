@@ -68,14 +68,7 @@ end
 
 keystone_settings = KeystoneHelper.keystone_settings(neutron, @cookbook_name)
 
-if neutron[:neutron][:ha][:server][:enabled]
-  admin_address = Chef::Recipe::Barclamp::Inventory.get_network_by_type(neutron, "admin").address
-  bind_host = admin_address
-  bind_port = neutron[:neutron][:ha][:ports][:server]
-else
-  bind_host = neutron[:neutron][:api][:service_host]
-  bind_port = neutron[:neutron][:api][:service_port]
-end
+bind_host, bind_port = NeutronHelper.get_bind_host_port(node)
 
 # Get Nova's insecure setting
 if nova.nil?
@@ -151,7 +144,8 @@ template neutron[:neutron][:config_file] do
       dns_domain: neutron[:neutron][:dhcp_domain],
       mtu_value: mtu_value,
       infoblox: infoblox_settings,
-      ipam_driver: ipam_driver
+      ipam_driver: ipam_driver,
+      rpc_workers: neutron[:neutron][:rpc_workers]
     )
 end
 

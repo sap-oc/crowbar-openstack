@@ -15,7 +15,7 @@
 #
 
 class BarbicanService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     @bc_name = "barbican"
     @logger = thelogger
   end
@@ -34,7 +34,7 @@ class BarbicanService < PacemakerServiceObject
           "cluster" => true,
           "admin" => false,
           "exclude_platform" => {
-            "suse" => "< 12.1",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         },

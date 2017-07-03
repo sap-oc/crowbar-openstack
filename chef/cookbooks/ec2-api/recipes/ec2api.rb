@@ -22,12 +22,23 @@ package "openstack-ec2-api-metadata"
 package "openstack-ec2-api-s3"
 
 # NOTE: ec2 is deployed via the nova barclamp
-ha_enabled  = node[:nova][:ha][:enabled]
-ssl_enabled = node[:nova][:ssl][:enabled]
+ha_enabled  = node[:nova]["ec2-api"][:ha][:enabled]
+ssl_enabled = node[:nova]["ec2-api"][:ssl][:enabled]
+api_protocol = ssl_enabled ? "https" : "http"
 db_settings = fetch_database_settings "nova"
-api_protocol = node[:nova][:ssl][:enabled] ? "https" : "http"
 ec2_api_port = node[:nova][:ports][:ec2_api]
 ec2_metadata_port = node[:nova][:ports][:ec2_metadata]
+if ha_enabled
+  bind_host = Chef::Recipe::Barclamp::Inventory.get_network_by_type(node, "admin").address
+  bind_port_ec2api = node[:nova][:ha][:ports][:ec2_api]
+  bind_port_metadata = node[:nova][:ha][:ports][:ec2_metadata]
+  bind_port_s3 = node[:nova][:ha][:ports][:ec2_s3]
+else
+  bind_host = "0.0.0.0"
+  bind_port_ec2api = node[:nova][:ports][:ec2_api]
+  bind_port_metadata = node[:nova][:ports][:ec2_metadata]
+  bind_port_s3 = node[:nova][:ports][:ec2_s3]
+end
 
 db_conn_scheme = db_settings[:url_scheme]
 
@@ -35,9 +46,7 @@ if db_settings[:backend_name] == "mysql"
   db_conn_scheme = "mysql+pymysql"
 end
 
-crowbar_pacemaker_sync_mark "wait-ec2_api_database" do
-  timeout 300
-end
+crowbar_pacemaker_sync_mark "wait-ec2_api_database" if ha_enabled
 
 database_connection = "#{db_conn_scheme}://" \
   "#{node[:nova]["ec2-api"][:db][:user]}" \
@@ -77,7 +86,7 @@ database_user "grant database access for #{@cookbook_name} database user" do
   only_if { !ha_enabled || CrowbarPacemakerHelper.is_cluster_founder?(node) }
 end
 
-crowbar_pacemaker_sync_mark "create-ec2_api_database"
+crowbar_pacemaker_sync_mark "create-ec2_api_database" if ha_enabled
 
 rabbit_settings = fetch_rabbitmq_settings "nova"
 keystone_settings = KeystoneHelper.keystone_settings(node, "nova")
@@ -88,6 +97,8 @@ register_auth_hash = { user: keystone_settings["admin_user"],
 
 my_admin_host = CrowbarHelper.get_host_for_admin_url(node, ha_enabled)
 my_public_host = CrowbarHelper.get_host_for_public_url(node, ssl_enabled, ha_enabled)
+
+crowbar_pacemaker_sync_mark "wait-ec2_api_register" if ha_enabled
 
 keystone_register "register ec2 user" do
   protocol keystone_settings["protocol"]
@@ -167,6 +178,21 @@ keystone_register "register ec2-metadata endpoint" do
   action :add_endpoint_template
 end
 
+crowbar_pacemaker_sync_mark "create-ec2_api_register" if ha_enabled
+
+# ec2-api ssl
+if node[:nova]["ec2-api"][:ssl][:enabled]
+  ssl_setup "setting up ssl for ec2-api" do
+    generate_certs node[:nova]["ec2-api"][:ssl][:generate_certs]
+    certfile node[:nova]["ec2-api"][:ssl][:certfile]
+    keyfile node[:nova]["ec2-api"][:ssl][:keyfile]
+    group node[:nova]["ec2-api"][:group]
+    fqdn node[:fqdn]
+    cert_required node[:nova]["ec2-api"][:ssl][:cert_required]
+    ca_certs node[:nova]["ec2-api"][:ssl][:ca_cert]
+  end
+end
+
 template node[:nova]["ec2-api"][:config_file] do
   source "ec2api.conf.erb"
   owner "root"
@@ -174,10 +200,13 @@ template node[:nova]["ec2-api"][:config_file] do
   mode 0o640
   variables(
     debug: node[:nova][:debug],
-    verbose: node[:nova][:verbose],
     database_connection: database_connection,
     rabbit_settings: rabbit_settings,
     keystone_settings: keystone_settings,
+    bind_host: bind_host,
+    bind_port_ec2api: bind_port_ec2api,
+    bind_port_metadata: bind_port_metadata,
+    bind_port_s3: bind_port_s3,
   )
 end
 
@@ -196,4 +225,8 @@ end
 service "openstack-ec2-api-s3" do
   action [:enable, :start]
   subscribes :restart, resources(template: node[:nova]["ec2-api"][:config_file])
+end
+
+if ha_enabled
+  include_recipe "ec2-api::ec2api_ha"
 end

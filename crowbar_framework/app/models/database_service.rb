@@ -16,7 +16,7 @@
 #
 
 class DatabaseService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     super(thelogger)
     @bc_name = "database"
   end
@@ -35,7 +35,7 @@ class DatabaseService < PacemakerServiceObject
           "cluster" => true,
           "admin" => false,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         }

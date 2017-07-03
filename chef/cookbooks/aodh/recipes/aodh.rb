@@ -11,7 +11,7 @@ include_recipe "database::client"
 include_recipe "#{db_settings[:backend_name]}::client"
 include_recipe "#{db_settings[:backend_name]}::python-client"
 
-crowbar_pacemaker_sync_mark "wait-aodh_database"
+crowbar_pacemaker_sync_mark "wait-aodh_database" if ha_enabled
 
 # Create the Aodh Database
 database "create #{node[:aodh][:db][:database]} database" do
@@ -44,7 +44,7 @@ database_user "grant database access for aodh database user" do
   only_if { !ha_enabled || CrowbarPacemakerHelper.is_cluster_founder?(node) }
 end
 
-crowbar_pacemaker_sync_mark "create-aodh_database"
+crowbar_pacemaker_sync_mark "create-aodh_database" if ha_enabled
 
 directory "/var/cache/aodh" do
   owner node[:aodh][:user]
@@ -74,6 +74,8 @@ register_auth_hash = { user: keystone_settings["admin_user"],
 my_admin_host = CrowbarHelper.get_host_for_admin_url(node, ha_enabled)
 my_public_host = CrowbarHelper.get_host_for_public_url(
   node, node[:aodh][:api][:protocol] == "https", ha_enabled)
+
+crowbar_pacemaker_sync_mark "wait-aodh_keystone_register" if ha_enabled
 
 keystone_register "register aodh user" do
   protocol keystone_settings["protocol"]
@@ -129,6 +131,8 @@ keystone_register "register aodh endpoint" do
   action :add_endpoint_template
 end
 
+crowbar_pacemaker_sync_mark "create-aodh_keystone_register" if ha_enabled
+
 db_name = node[:aodh][:db][:database]
 db_user = node[:aodh][:db][:user]
 db_password = node[:aodh][:db][:password]
@@ -167,7 +171,7 @@ template node[:aodh][:config_file] do
   notifies :reload, resources(service: "apache2")
 end
 
-crowbar_pacemaker_sync_mark "wait-aodh_db_sync"
+crowbar_pacemaker_sync_mark "wait-aodh_db_sync" if ha_enabled
 
 execute "aodh-dbsync" do
   command "aodh-dbsync"
@@ -192,7 +196,7 @@ ruby_block "mark node for aodh db_sync" do
   subscribes :create, "execute[aodh-dbsync]", :immediately
 end
 
-crowbar_pacemaker_sync_mark "create-aodh_db_sync"
+crowbar_pacemaker_sync_mark "create-aodh_db_sync" if ha_enabled
 
 service "aodh-api" do
   service_name node[:aodh][:api][:service_name]

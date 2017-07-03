@@ -73,6 +73,7 @@ default[:nova][:vcenter][:user] = ""
 default[:nova][:vcenter][:password] = ""
 default[:nova][:vcenter][:clusters] = []
 default[:nova][:vcenter][:interface] = ""
+default[:nova][:vcenter][:dvs_name] = "dvSwitch0"
 
 #
 # Scheduler Settings
@@ -86,7 +87,6 @@ default[:nova][:scheduler][:reserved_host_memory_mb] = 512
 # Shared Settings
 #
 default[:nova][:hostname] = "nova"
-default[:nova][:my_ip] = ipaddress
 default[:nova][:user] = "nova"
 default[:nova][:group] = "nova"
 default[:nova][:home_dir] = "/var/lib/nova"

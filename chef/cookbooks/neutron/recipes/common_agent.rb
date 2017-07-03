@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 neutron = nil
 if node.attribute?(:cookbook) and node[:cookbook] == "nova"
   neutrons = node_search_with_cache("roles:neutron-server", node[:nova][:neutron_instance])
@@ -49,6 +48,35 @@ bash "reload disable-rp_filter-sysctl" do
   code "/sbin/sysctl -e -q -p #{disable_rp_filter_file}"
   action :nothing
   subscribes :run, resources(cookbook_file: disable_rp_filter_file), :delayed
+end
+
+neighbour_table_overflow_file = "/etc/sysctl.d/50-neutron-neighbour-table-overflow.conf"
+cookbook_file neighbour_table_overflow_file do
+  source "sysctl-neighbour-table-overflow.conf"
+  mode "0644"
+end
+
+bash "reload neighbour-table-overflow.conf" do
+  code "/sbin/sysctl -e -q -p #{neighbour_table_overflow_file}"
+  action :nothing
+  subscribes :run, resources(cookbook_file: neighbour_table_overflow_file), :delayed
+end
+
+if neutron[:neutron][:networking_plugin] == "ml2" &&
+    neutron[:neutron][:ml2_mechanism_drivers].include?("vmware_dvs") &&
+    node.roles.include?("nova-compute-vmware")
+
+  include_recipe "neutron::vmware_dvs_agents"
+
+  # No L2/L3 agents need to be installed on DVS integrated
+  # VMware compute nodes aside from the neutron-dvs agent
+  # This check is sufficient, because a node cannot be assigned
+  # the nova-compute-vmware and nova-compute-<something-else> roles
+  # at the same time. The only exception is if DVR is enabled,
+  # when L2/L3 agents are required.
+  unless neutron[:neutron][:use_dvr] || node.roles.include?("neutron-network")
+    return # skip everything else in this recipe
+  end
 end
 
 if neutron[:neutron][:networking_plugin] == "ml2" &&
@@ -140,18 +168,32 @@ if neutron[:neutron][:networking_plugin] == "ml2"
     neutron_agent = node[:neutron][:platform][:ovs_agent_name]
     agent_config_path = "/etc/neutron/plugins/ml2/openvswitch_agent.ini"
     interface_driver = "neutron.agent.linux.interface.OVSInterfaceDriver"
-    bridge_mappings = ""
+    bridge_mappings = []
+
+    if ml2_type_drivers.include?("vlan")
+      bridge = node[:crowbar_wall][:network][:nets][:nova_fixed].last
+      bridge_mappings.push("physnet1:" + bridge)
+    end
+
     if neutron[:neutron][:use_dvr] || node.roles.include?("neutron-network")
-      bridge_mappings = "floating:br-public"
-      if multiple_external_networks
-        bridge_mappings += ", "
-        bridge_mappings += neutron[:neutron][:additional_external_networks].collect { |n| n + ":" + "br-" + n }.join ","
+      external_networks = ["nova_floating"]
+      external_networks.concat(node[:neutron][:additional_external_networks])
+      ext_physnet_map = NeutronHelper.get_neutron_physnets(node, external_networks)
+      external_networks.each do |net|
+        ext_iface = node[:crowbar_wall][:network][:nets][net].last
+        # we can't do "floating:br-public, physnet1:br-public"; this also means
+        # that all relevant nodes here must have a similar bridge_mappings
+        # setting
+        next if ext_physnet_map[net] == "physnet1"
+        bridge_mappings.push(ext_physnet_map[net] + ":" + ext_iface)
       end
     end
-    if ml2_type_drivers.include?("vlan")
-      bridge_mappings += ", " unless bridge_mappings.empty?
-      bridge_mappings += "physnet1:br-fixed"
+
+    if (node.roles & ["ironic-server", "nova-compute-ironic"]).any?
+      bridge_mappings.push("ironic:br-ironic")
     end
+
+    bridge_mappings = bridge_mappings.join(", ")
   when ml2_mech_drivers.include?("linuxbridge")
     package node[:neutron][:platform][:lb_agent_pkg]
 

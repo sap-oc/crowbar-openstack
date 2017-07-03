@@ -23,4 +23,11 @@ vni_ranges = <%= @vxlan_start %>:<%= @vxlan_end %>
 <% if @ml2_type_drivers.include?("vxlan") && @ml2_mechanism_drivers.include?("linuxbridge") && !@vxlan_mcast_group.empty? -%>
 vxlan_group = <%= @vxlan_mcast_group %>
 <% end -%>
+[l2pop]
+agent_boot_time = <%= @l2pop_agent_boot_time %>
 [securitygroup]
+<% if @ml2_mechanism_drivers.include?("vmware_dvs") -%>
+[dvs]
+clean_on_restart = <%= @vmware_dvs_config[:clean_on_restart] ? 'True' : 'False' %>
+precreate_networks = <%= @vmware_dvs_config[:precreate_networks] ? 'True' : 'False' %>
+<% end -%>

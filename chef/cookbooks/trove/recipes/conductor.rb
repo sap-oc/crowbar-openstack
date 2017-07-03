@@ -24,13 +24,14 @@ rabbit_trove_url = TroveHelper.get_rabbitmq_trove_url(node, rabbitmq_servers)
 
 template node[:trove][:conductor][:config_file] do
   source "trove-conductor.conf.erb"
-  owner node[:trove][:user]
+  owner "root"
   group node[:trove][:group]
   mode 00640
   variables(
     keystone_settings: KeystoneHelper.keystone_settings(node, :trove),
     sql_connection: sql_connection,
-    rabbit_trove_url: rabbit_trove_url
+    rabbit_trove_url: rabbit_trove_url,
+    rabbit_default_settings: fetch_rabbitmq_settings
   )
   notifies :restart, "service[trove-conductor]"
 end

@@ -51,13 +51,7 @@ public_ip = Swift::Evaluator.get_ip_by_type(node, :public_ip_expr)
 
 ha_enabled = node[:swift][:ha][:enabled]
 
-if node[:swift][:ha][:enabled]
-  bind_host = local_ip
-  bind_port = node[:swift][:ha][:ports][:proxy]
-else
-  bind_host = "0.0.0.0"
-  bind_port = node[:swift][:ports][:proxy]
-end
+bind_host, bind_port = SwiftHelper.get_bind_host_port(node)
 
 admin_host = CrowbarHelper.get_host_for_admin_url(node, ha_enabled)
 public_host = CrowbarHelper.get_host_for_public_url(node, node[:swift][:ssl][:enabled], ha_enabled)
@@ -131,8 +125,15 @@ if node[:swift][:middlewares][:s3][:enabled]
 end
 
 # enable ceilometer middleware if ceilometer is configured
+# and rabbitmq is unsecured - lp#1673738
+ceilometermiddleware_enabled = node.roles.include? "ceilometer-swift-proxy-middleware"
+rabbitmq_ssl_enabled = proxy_config[:rabbit_settings][:use_ssl]
+if ceilometermiddleware_enabled && rabbitmq_ssl_enabled
+  Chef::Log.warn("Disabling ceilometer swift-proxy middleware because it cannot connect"\
+                 " to rabbitmq over SSL")
+end
 node.set[:swift][:middlewares]["ceilometer"] = {
-  "enabled" => (node.roles.include? "ceilometer-swift-proxy-middleware")
+  "enabled" => ceilometermiddleware_enabled && !rabbitmq_ssl_enabled
 }
 
 if node[:swift][:middlewares]["ceilometer"]["enabled"]
@@ -154,7 +155,7 @@ case proxy_config[:auth_method]
      proxy_config[:reseller_prefix] = node[:swift][:reseller_prefix]
      proxy_config[:keystone_delay_auth_decision] = node["swift"]["keystone_delay_auth_decision"]
 
-     crowbar_pacemaker_sync_mark "wait-swift_register"
+     crowbar_pacemaker_sync_mark "wait-swift_register" if ha_enabled
 
      register_auth_hash = { user: keystone_settings["admin_user"],
                             password: keystone_settings["admin_password"],
@@ -238,7 +239,7 @@ case proxy_config[:auth_method]
         action :add_endpoint_template
      end
 
-     crowbar_pacemaker_sync_mark "create-swift_register"
+     crowbar_pacemaker_sync_mark "create-swift_register" if ha_enabled
 
    when "tempauth"
      ## uses defaults...
@@ -261,7 +262,7 @@ proxy_config[:memcached_ips] = node_search_with_cache("roles:swift-proxy").map d
 end.sort
 
 ## Create the proxy server configuraiton file
-template "/etc/swift/proxy-server.conf" do
+template node[:swift][:proxy_config_file] do
   source "proxy-server.conf.erb"
   mode "0640"
   owner "root"
@@ -308,8 +309,8 @@ if node[:swift][:frontend]=="native"
       restart_command "stop swift-proxy ; start swift-proxy"
     end
     action [:enable, :start]
-    subscribes :restart, resources(template: "/etc/swift/swift.conf"), :immediately
-    subscribes :restart, resources(template: "/etc/swift/proxy-server.conf"), :immediately
+    subscribes :restart, resources(template: node[:swift][:config_file]), :immediately
+    subscribes :restart, resources(template: node[:swift][:proxy_config_file]), :immediately
     provider Chef::Provider::CrowbarPacemakerService if ha_enabled
     # Do not even try to start the daemon if we don't have the ring yet
     only_if { ::File.exist? "/etc/swift/object.ring.gz" }
@@ -386,7 +387,7 @@ if node[:platform_family] == "debian"
     code <<-EOH
 EOH
     action :nothing
-    subscribes :run, resources(template: "/etc/swift/proxy-server.conf")
+    subscribes :run, resources(template: node[:swift][:proxy_config_file])
     notifies :restart, resources(service: "memcached-swift-proxy")
     if node[:swift][:frontend]=="native"
       notifies :restart, resources(service: "swift-proxy")

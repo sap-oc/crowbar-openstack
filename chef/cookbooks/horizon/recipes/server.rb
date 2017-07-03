@@ -17,6 +17,8 @@ include_recipe "apache2"
 include_recipe "apache2::mod_wsgi"
 include_recipe "apache2::mod_rewrite"
 
+keystone_settings = KeystoneHelper.keystone_settings(node, @cookbook_name)
+
 if %w(suse).include? node[:platform_family]
   dashboard_path = "/srv/www/openstack-dashboard"
 else
@@ -25,6 +27,18 @@ end
 
 if node[:horizon][:apache][:ssl]
   include_recipe "apache2::mod_ssl"
+end
+
+# Fake service to take control of the WSGI process from apache that
+# runs Horizon.  We replace the `reload` action, sending manually the
+# signal SIGUSR1 to all the process that are part of `wsgi:horizon`
+service "horizon" do
+  service_name "apache2"
+  if node[:platform_family] == "suse"
+    reload_command 'sleep 1 && pkill --signal SIGUSR1 -f "^\(wsgi:horizon\)" && sleep 1'
+  end
+  supports reload: true, restart: true, status: true
+  ignore_failure true
 end
 
 case node[:platform_family]
@@ -54,7 +68,7 @@ else
   unless node[:horizon][:site_theme].empty?
     package "openstack-dashboard-theme-#{node[:horizon][:site_theme]}" do
       action :install
-      notifies :reload, resources(service: "apache2")
+      notifies :reload, "service[horizon]"
     end
   end
 end
@@ -73,7 +87,7 @@ unless neutron_lbaas_ui_pkgname.nil?
   unless neutron_servers.empty?
     package neutron_lbaas_ui_pkgname do
       action :install
-      notifies :reload, resources(service: "apache2")
+      notifies :reload, "service[horizon]"
     end
   end
 end
@@ -92,7 +106,7 @@ unless manila_ui_pkgname.nil?
   unless manila_servers.empty?
     package manila_ui_pkgname do
       action :install
-      notifies :reload, resources(service: "apache2")
+      notifies :reload, "service[horizon]"
     end
   end
 end
@@ -111,7 +125,7 @@ unless magnum_ui_pkgname.nil?
   unless magnum_servers.empty?
     package magnum_ui_pkgname do
       action :install
-      notifies :reload, resources(service: "apache2")
+      notifies :reload, "service[horizon]"
     end
   end
 end
@@ -130,7 +144,7 @@ unless trove_ui_pkgname.nil?
   unless trove_servers.empty?
     package trove_ui_pkgname do
       action :install
-      notifies :reload, resources(service: "apache2")
+      notifies :reload, "service[horizon]"
     end
   end
 end
@@ -149,8 +163,47 @@ unless sahara_ui_pkgname.nil?
   unless sahara_servers.empty?
     package sahara_ui_pkgname do
       action :install
-      notifies :reload, resources(service: "apache2")
+      notifies :reload, "service[horizon]"
     end
+  end
+end
+
+# install horizon ironic plugin if needed
+ironic_ui_pkgname =
+  case node[:platform_family]
+  when "suse"
+    "openstack-horizon-plugin-ironic-ui"
+  when "rhel"
+    "openstack-ironic-ui"
+  end
+
+unless ironic_ui_pkgname.nil?
+  ironic_servers = search(:node, "roles:ironic-server") || []
+  unless ironic_servers.empty?
+    package ironic_ui_pkgname do
+      action :install
+      notifies :reload, "service[horizon]"
+    end
+  end
+end
+
+monasca_ui_pkgname =
+  case node[:platform_family]
+  when "suse"
+    "openstack-horizon-plugin-monasca-ui"
+  when "rhel"
+    "openstack-monasca-ui"
+  end
+
+unless monasca_ui_pkgname.nil?
+  monasca_servers = node_search_with_cache("roles:monasca-server")
+  unless monasca_servers.empty?
+    include_recipe "#{@cookbook_name}::monasca_ui"
+    package monasca_ui_pkgname do
+      action :install
+      notifies :reload, "service[horizon]"
+    end
+    grafana_available = true
   end
 end
 
@@ -217,7 +270,7 @@ when "postgresql"
     django_db_backend = "'django.db.backends.postgresql_psycopg2'"
 end
 
-crowbar_pacemaker_sync_mark "wait-horizon_database"
+crowbar_pacemaker_sync_mark "wait-horizon_database" if ha_enabled
 
 # Create the Dashboard Database
 database "create #{node[:horizon][:db][:database]} database" do
@@ -251,7 +304,7 @@ database_user "grant database access for dashboard database user" do
     only_if { !ha_enabled || CrowbarPacemakerHelper.is_cluster_founder?(node) }
 end
 
-crowbar_pacemaker_sync_mark "create-horizon_database"
+crowbar_pacemaker_sync_mark "create-horizon_database" if ha_enabled
 
 db_settings = {
   "ENGINE" => django_db_backend,
@@ -261,8 +314,6 @@ db_settings = {
   "HOST" => "'#{db_settings[:address]}'",
   "default-character-set" => "'utf8'"
 }
-
-keystone_settings = KeystoneHelper.keystone_settings(node, @cookbook_name)
 
 glances = search(:node, "roles:glance-server") || []
 if glances.length > 0
@@ -322,6 +373,14 @@ else
   manila_insecure = false
 end
 
+ceilometers = search(:node, "roles:ceilometer-server") || []
+if !ceilometers.empty?
+  ceilometer = ceilometers[0][:ceilometer]
+  ceilometer_insecure = ceilometer[:api][:protocol] == "https" && ceilometer[:ssl][:insecure]
+else
+  ceilometer_insecure = false
+end
+
 # We're going to use memcached as a cache backend for Django
 
 # make sure our memcache only listens on the admin IP address
@@ -350,7 +409,7 @@ when "rhel"
   package "python-memcached"
 end
 
-crowbar_pacemaker_sync_mark "wait-horizon_config"
+crowbar_pacemaker_sync_mark "wait-horizon_config" if ha_enabled
 
 local_settings = "#{dashboard_path}/openstack_dashboard/local/" \
                  "local_settings.d/_100_local_settings.py"
@@ -399,7 +458,8 @@ template local_settings do
     || neutron_insecure \
     || nova_insecure \
     || heat_insecure \
-    || manila_insecure,
+    || manila_insecure \
+    || ceilometer_insecure,
     db_settings: db_settings,
     enable_lb: neutron_use_lbaas,
     enable_vpn: neutron_use_vpnaas,
@@ -423,7 +483,7 @@ template local_settings do
   action :create
 end
 
-crowbar_pacemaker_sync_mark "create-horizon_config"
+crowbar_pacemaker_sync_mark "create-horizon_config" if ha_enabled
 
 if ha_enabled
   log "HA support for horizon is enabled"
@@ -481,7 +541,8 @@ template "#{node[:apache][:dir]}/sites-available/openstack-dashboard.conf" do
     use_ssl: node[:horizon][:apache][:ssl],
     ssl_crt_file: node[:horizon][:apache][:ssl_crt_file],
     ssl_key_file: node[:horizon][:apache][:ssl_key_file],
-    ssl_crt_chain_file: node[:horizon][:apache][:ssl_crt_chain_file]
+    ssl_crt_chain_file: node[:horizon][:apache][:ssl_crt_chain_file],
+    grafana_available: defined?(grafana_available) ? grafana_available : false
   )
   if ::File.symlink?("#{node[:apache][:dir]}/sites-enabled/openstack-dashboard.conf") || node[:platform_family] == "suse"
     notifies :reload, resources(service: "apache2")

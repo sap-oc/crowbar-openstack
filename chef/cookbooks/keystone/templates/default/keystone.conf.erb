@@ -23,6 +23,9 @@ public_port = <%= @bind_service_port %>
 admin_bind_host = <%= @bind_admin_host %>
 admin_port = <%= @bind_admin_port %>
 
+[fernet_tokens]
+max_active_keys = <%= @max_active_keys %>
+
 [identity]
 domain_specific_drivers_enabled = <%= node[:keystone][:domain_specific_drivers] ? "True" : "False" %>
 
@@ -98,6 +101,10 @@ rabbit_host = <%= @rabbit_settings[:address] %>
 rabbit_userid = <%= @rabbit_settings[:user] %>
 rabbit_password = <%= @rabbit_settings[:password] %>
 rabbit_virtual_host = <%= @rabbit_settings[:vhost] %>
+rabbit_use_ssl = <%= @rabbit_settings[:use_ssl] %>
+<% if @rabbit_settings[:client_ca_certs] -%>
+kombu_ssl_ca_certs = <%= @rabbit_settings[:client_ca_certs] %>
+<% end -%>
 
 [oslo_policy]
 policy_file = <%= node[:keystone][:policy_file] %>
@@ -115,4 +122,4 @@ ca_certs = <%= @signing_ca_certs %>
 
 [token]
 expiration = <%= @token_expiration %>
-provider = uuid
+provider = <%= node[:keystone][:signing][:token_format] %>

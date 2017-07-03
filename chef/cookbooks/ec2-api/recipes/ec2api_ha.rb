@@ -13,19 +13,12 @@
 # limitations under the License.
 #
 
-unless node[:nova][:ha][:enabled]
-  log "HA support for ec2-api is disabled"
-  return
-end
-
-log "Setting up ec2-api HA support"
-
 include_recipe "crowbar-pacemaker::haproxy"
 
 haproxy_loadbalancer "ec2-api" do
   address "0.0.0.0"
   port node[:nova][:ports][:ec2_api]
-  use_ssl false
+  use_ssl node[:nova]["ec2-api"][:ssl][:enabled]
   servers CrowbarPacemakerHelper.haproxy_servers_for_service(
     node, "nova", "ec2-api", "ec2_api"
   )
@@ -35,9 +28,19 @@ end.run_action(:create)
 haproxy_loadbalancer "ec2-metadata" do
   address "0.0.0.0"
   port node[:nova][:ports][:ec2_metadata]
-  use_ssl false
+  use_ssl node[:nova]["ec2-api"][:ssl][:enabled]
   servers CrowbarPacemakerHelper.haproxy_servers_for_service(
     node, "nova", "ec2-api", "ec2_metadata"
+  )
+  action :nothing
+end.run_action(:create)
+
+haproxy_loadbalancer "ec2-s3" do
+  address "0.0.0.0"
+  port node[:nova][:ports][:ec2_s3]
+  use_ssl node[:nova]["ec2-api"][:ssl][:enabled]
+  servers CrowbarPacemakerHelper.haproxy_servers_for_service(
+    node, "nova", "ec2-api", "ec2_s3"
   )
   action :nothing
 end.run_action(:create)

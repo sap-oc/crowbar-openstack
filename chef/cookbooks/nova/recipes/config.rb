@@ -18,7 +18,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 is_controller = node["roles"].include?("nova-controller")
 
 my_ip_net = "admin"
@@ -261,6 +260,31 @@ else
   bind_port_serialproxy = node[:nova][:ports][:serialproxy]
 end
 
+ironic_servers = node_search_with_cache("roles:ironic-server") || []
+if ironic_servers.any? && (node["roles"] & ["nova-compute-ironic", "nova-controller"]).any?
+  use_baremetal_filters = true
+  track_instance_changes = false
+  override_force_config_drive = true
+  ironic_node = ironic_servers.first
+  ironic_settings = {}
+  ironic_settings[:keystone_version] = "v2.0"
+  ironic_settings[:api_protocol] = ironic_node[:ironic][:api][:protocol]
+  ironic_settings[:api_port] = ironic_node[:ironic][:api][:port]
+  ironic_settings[:service_user] = ironic_node[:ironic][:service_user]
+  ironic_settings[:service_password] = ironic_node[:ironic][:service_password]
+  ironic_settings[:public_host] = CrowbarHelper.get_host_for_public_url(
+    ironic_node,
+    ironic_settings[:api_protocol] == "https"
+  )
+  reserved_host_memory = 0
+else
+  use_baremetal_filters = false
+  track_instance_changes = true
+  override_force_config_drive = false
+  ironic_settings = nil
+  reserved_host_memory = node[:nova][:scheduler][:reserved_host_memory_mb]
+end
+
 vendordata_jsonfile = "/etc/nova/suse-vendor-data.json"
 
 template vendordata_jsonfile do
@@ -274,10 +298,10 @@ template vendordata_jsonfile do
 end
 
 # Allow to use some specific NICs for live migration
-migration_host = if node[:nova][:migration][:network] == "admin"
-  "%s"
+live_migration_inbound_fqdn = if node[:nova][:migration][:network] == "admin"
+  node[:fqdn]
 else
-  "#{node[:nova][:migration][:network]}.%s"
+  "#{node[:nova][:migration][:network]}.#{node[:fqdn]}"
 end
 
 # Select libvirt compute flags for this particular compute node
@@ -334,9 +358,9 @@ template node[:nova][:config_file] do
     ec2_host: admin_api_host,
     ec2_dmz_host: public_api_host,
     libvirt_migration: node[:nova]["use_migration"],
-    migration_host: migration_host,
+    live_migration_inbound_fqdn: live_migration_inbound_fqdn,
     shared_instances: node[:nova]["use_shared_instance_storage"],
-    force_config_drive: node[:nova]["force_config_drive"],
+    force_config_drive: override_force_config_drive || node[:nova]["force_config_drive"],
     glance_server_protocol: glance_server_protocol,
     glance_server_host: glance_server_host,
     glance_server_port: glance_server_port,
@@ -374,7 +398,11 @@ template node[:nova][:config_file] do
     use_rootwrap_daemon: use_rootwrap_daemon,
     oat_appraiser_host: oat_server[:hostname],
     oat_appraiser_port: "8443",
-    has_itxt: has_itxt
+    has_itxt: has_itxt,
+    reserved_host_memory: reserved_host_memory,
+    use_baremetal_filters: use_baremetal_filters,
+    track_instance_changes: track_instance_changes,
+    ironic_settings: ironic_settings
   )
 end
 

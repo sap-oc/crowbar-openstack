@@ -16,7 +16,7 @@
 #
 
 class NovaService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     super(thelogger)
     @bc_name = "nova"
   end
@@ -33,7 +33,7 @@ class NovaService < PacemakerServiceObject
           "unique" => false,
           "count" => 1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           },
           "cluster" => true
@@ -49,7 +49,7 @@ class NovaService < PacemakerServiceObject
           "unique" => false,
           "count" => -1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           },
           "remotes" => true
@@ -58,7 +58,7 @@ class NovaService < PacemakerServiceObject
           "unique" => false,
           "count" => -1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           },
           "remotes" => true
@@ -67,7 +67,7 @@ class NovaService < PacemakerServiceObject
           "unique" => false,
           "count" => 1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         },
@@ -75,7 +75,7 @@ class NovaService < PacemakerServiceObject
           "unique" => false,
           "count" => 1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         },
@@ -83,15 +83,23 @@ class NovaService < PacemakerServiceObject
           "unique" => false,
           "count" => -1,
           "platform" => {
-            "suse" => ">= 12.2",
+            "suse" => ">= 12.3"
           },
           "remotes" => true
+        },
+        "nova-compute-ironic" => {
+          "unique" => false,
+          "count" => 1,
+          "platform" => {
+            "suse" => ">= 12.3"
+          },
+          "remotes" => false
         },
         "ec2-api" => {
           "unique" => false,
           "count" => -1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           },
           "cluster" => true
@@ -272,6 +280,14 @@ class NovaService < PacemakerServiceObject
     dirty = prepare_role_for_ha_with_haproxy(role, ["nova", "ha", "enabled"], ha_enabled, controller_elements, vip_networks)
     role.save if dirty
 
+    ec2_controller_elements, ec2_controller_nodes, ec2_ha_enabled = role_expand_elements(role, "ec2-api")
+    reset_sync_marks_on_clusters_founders(ec2_controller_elements)
+    Openstack::HA.set_controller_role(ec2_controller_nodes) if ec2_ha_enabled
+
+    dirty = false
+    dirty = prepare_role_for_ha_with_haproxy(role, ["nova", "ec2-api", "ha", "enabled"], ec2_ha_enabled,  ec2_controller_elements, vip_networks)
+    role.save if dirty
+
     net_svc = NetworkService.new @logger
     # All nodes must have a public IP, even if part of a cluster; otherwise
     # the VIP can't be moved to the nodes
@@ -280,6 +296,12 @@ class NovaService < PacemakerServiceObject
     end
 
     allocate_virtual_ips_for_any_cluster_in_networks_and_sync_dns(controller_elements, vip_networks)
+
+    # enable ironic network interface, do this before enable_neutron_networks for proper bridge setup
+    _, ironic_nodes, = role_expand_elements(role, "nova-compute-ironic")
+    ironic_nodes.each do |n|
+      net_svc.enable_interface "default", "ironic", n
+    end
 
     neutron = Proposal.find_by(barclamp: "neutron",
                                name: role.default_attributes["nova"]["neutron_instance"])
@@ -387,6 +409,15 @@ class NovaService < PacemakerServiceObject
       end
     end
 
+    unless elements["nova-compute-ironic"].nil? || elements["nova-compute-ironic"].empty?
+      unless network_present?("ironic")
+        validation_error I18n.t("barclamp.#{@bc_name}.validation.ironic_network")
+      end
+      if Proposal.where(barclamp: "ironic").empty?
+        validation_error I18n.t("barclamp.#{@bc_name}.validation.ironic_server")
+      end
+    end
+
     elements["nova-compute-kvm"].each do |n|
       nodes[n] += 1
     end unless elements["nova-compute-kvm"].nil?
@@ -413,6 +444,9 @@ class NovaService < PacemakerServiceObject
         arch: node["kernel"]["machine"]
       )
     end unless elements["nova-compute-xen"].nil?
+    elements["nova-compute-ironic"].each do |n|
+      nodes[n] += 1
+    end unless elements["nova-compute-ironic"].nil?
 
     nodes.each do |key, value|
       if value > 1

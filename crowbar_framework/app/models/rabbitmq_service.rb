@@ -16,7 +16,7 @@
 #
 
 class RabbitmqService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     super(thelogger)
     @bc_name = "rabbitmq"
   end
@@ -33,7 +33,7 @@ class RabbitmqService < PacemakerServiceObject
           "unique" => false,
           "count" => 1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           },
           "cluster" => true

@@ -43,6 +43,7 @@ rescue = <%= @use_rescue %>
 interface_attach = <%= @use_interface_attach %>
 personality = false
 config_drive = <%= @use_config_drive %>
+attach_encrypted_volume = <%= @use_attach_encrypted_volume %>
 
 [dashboard]
 dashboard_url = <%= @horizon_protocol %>://<%= @horizon_host %>/
@@ -169,6 +170,7 @@ region = <%= @keystone_settings['endpoint_region'] %>
 endpoint_type = internalURL
 multitenancy_enabled = False
 enable_protocols = <%= @manila_settings['enable_protocols'] %>
+storage_protocol = <%= @manila_settings['storage_protocol'] %>
 enable_ip_rules_for_protocols = <%= @manila_settings['enable_ip_rules_for_protocols'] %>
 enable_cert_rules_for_protocols = <%= @manila_settings['enable_cert_rules_for_protocols'] %>
 suppress_errors_in_cleanup = true
@@ -216,3 +218,4 @@ vendor_name = <%= @vendor_name %>
 multi_backend = <%= @cinder_multi_backend ? 'true' : 'false' %>
 backup = false
 api_v3 = True
+snapshot = <%= @cinder_snapshot %>

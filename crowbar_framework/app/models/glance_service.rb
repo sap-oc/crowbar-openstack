@@ -16,7 +16,7 @@
 #
 
 class GlanceService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     super(thelogger)
     @bc_name = "glance"
   end
@@ -34,7 +34,7 @@ class GlanceService < PacemakerServiceObject
           "cluster" => true,
           "count" => 1,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         }

@@ -37,13 +37,14 @@ object_store_url, object_store_insecure =
 
 template node[:trove][:taskmanager][:config_file] do
   source "trove-taskmanager.conf.erb"
-  owner node[:trove][:user]
+  owner "root"
   group node[:trove][:group]
   mode 00640
   variables(
     keystone_settings: keystone_settings,
     sql_connection: sql_connection,
     rabbit_trove_url: rabbit_trove_url,
+    rabbit_default_settings: fetch_rabbitmq_settings,
     nova_url: nova_url,
     nova_insecure: nova_insecure,
     cinder_url: cinder_url,

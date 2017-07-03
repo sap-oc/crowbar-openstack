@@ -17,7 +17,7 @@
 #
 
 class MagnumService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     @bc_name = "magnum"
     @logger = thelogger
   end
@@ -48,7 +48,7 @@ class MagnumService < PacemakerServiceObject
           "cluster" => true,
           "admin" => false,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         }
@@ -93,6 +93,15 @@ class MagnumService < PacemakerServiceObject
 
   def validate_proposal_after_save(proposal)
     validate_one_for_role proposal, "magnum-server"
+    if proposal["attributes"][@bc_name]["cert"]["cert_manager_type"] == "barbican"
+      # Check if barbican barclamp is applied and active
+      barbican_role = NodeObject.find("roles:barbican-controller")
+      if barbican_role.empty?
+        validation_error I18n.t(
+          "barclamp.#{@bc_name}.validation.barbican.barbican_not_deployed"
+        )
+      end
+    end
     super
   end
 

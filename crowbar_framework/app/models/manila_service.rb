@@ -15,7 +15,7 @@
 #
 
 class ManilaService < PacemakerServiceObject
-  def initialize(thelogger)
+  def initialize(thelogger = nil)
     @bc_name = "manila"
     @logger = thelogger
   end
@@ -34,7 +34,7 @@ class ManilaService < PacemakerServiceObject
           "cluster" => true,
           "admin" => false,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         },
@@ -43,7 +43,7 @@ class ManilaService < PacemakerServiceObject
           "count" => -1,
           "admin" => false,
           "exclude_platform" => {
-            "suse" => "< 12.2",
+            "suse" => "< 12.3",
             "windows" => "/.*/"
           }
         }

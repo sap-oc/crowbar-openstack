@@ -11,9 +11,13 @@
       "verbose": true,
       "create_default_networks": true,
       "dhcp_domain": "openstack.local",
+      "rpc_workers": 1,
       "use_lbaas": true,
       "lbaasv2_driver": "haproxy",
       "use_l2pop": false,
+      "l2pop": {
+        "agent_boot_time": 180
+      },
       "use_dvr": false,
       "additional_external_networks": [],
       "networking_plugin": "ml2",
@@ -69,6 +73,10 @@
         "tz_uuid": "",
         "l3_gw_uuid": ""
       },
+      "vmware_dvs": {
+        "clean_on_restart": true,
+        "precreate_networks": false
+      },
       "zvm": {
         "zvm_xcat_server": "",
         "zvm_xcat_username": "",
@@ -121,7 +129,7 @@
     "neutron": {
       "crowbar-revision": 0,
       "crowbar-applied": false,
-      "schema-revision": 107,
+      "schema-revision": 110,
       "element_states": {
         "neutron-server": [ "readying", "ready", "applying" ],
         "neutron-network": [ "readying", "ready", "applying" ]

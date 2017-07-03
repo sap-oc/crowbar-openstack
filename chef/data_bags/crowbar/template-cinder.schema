@@ -71,7 +71,8 @@
                     "netapp_password": { "type": "str", "required": true },
                     "netapp_vfiler": { "type": "str", "required": true },
                     "netapp_transport_type": { "type": "str", "required": true },
-                    "netapp_volume_list": { "type": "str", "required": true }
+                    "netapp_volume_list": { "type": "str", "required": true },
+                    "max_over_subscription_ratio": { "type": "int", "required": true }
                 }
                 },
                 "emc": {
@@ -99,8 +100,7 @@
                 },
                 "nfs": {
                 "type": "map", "mapping": {
-                    "nfs_shares": { "type": "str", "required": true },
-                    "nfs_mount_options": { "type": "str", "required": true }
+                    "nfs_shares": { "type": "str", "required": true }
                 }
                 },
                 "rbd": {
@@ -110,7 +110,8 @@
                     "admin_keyring": { "type": "str", "required": true },
                     "pool": { "type": "str", "required": true },
                     "user": { "type": "str", "required": true },
-                    "secret_uuid": { "type": "str", "required": true }
+                    "secret_uuid": { "type": "str", "required": true },
+                    "flatten_volume_from_snapshot": { "type": "bool", "required": true }
                     }
                 },
                 "vmware": {
@@ -207,7 +208,8 @@
                       "netapp_password": { "type": "str", "required": true },
                       "netapp_vfiler": { "type": "str", "required": true },
                       "netapp_transport_type": { "type": "str", "required": true },
-                      "netapp_volume_list": { "type": "str", "required": true }
+                      "netapp_volume_list": { "type": "str", "required": true },
+                      "max_over_subscription_ratio": { "type": "int", "required": true }
                     }
                   },
                   "emc": {
@@ -235,8 +237,7 @@
                   },
                   "nfs": {
                     "type": "map", "mapping": {
-                      "nfs_shares": { "type": "str", "required": true },
-                      "nfs_mount_options": { "type": "str", "required": true }
+                      "nfs_shares": { "type": "str", "required": true }
                     }
                   },
                   "rbd": {
@@ -246,7 +247,8 @@
                       "admin_keyring": { "type": "str", "required": true },
                       "pool": { "type": "str", "required": true },
                       "user": { "type": "str", "required": true },
-                      "secret_uuid" : { "type": "str", "required": true }
+                      "secret_uuid" : { "type": "str", "required": true },
+                      "flatten_volume_from_snapshot": { "type": "bool", "required": true }
                     }
                   },
                   "vmware": {
