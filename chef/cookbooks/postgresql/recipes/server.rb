@@ -164,3 +164,13 @@ bash "assign-db_maker-password" do
   only_if only_if_command if ha_enabled
   action :run
 end
+
+# After editing the config, a HUP signal has to be sent to postgres
+bash "send-sighup-to-postgres" do
+  user "root"
+  code <<-EOH
+    pkill -SIGHUP postgres
+  EOH
+  only_if only_if_command if ha_enabled
+  action :run
+end
