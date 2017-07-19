@@ -115,15 +115,38 @@ raw_configuration.each do |key, value|
   postgresql_configuration[key] = formatted_value
 end
 
+reloadable_parameters = [
+  "log_line_prefix"
+]
+
+config_needs_restart = postgresql_configuration.reject do |key, value|
+  reloadable_parameters.include? key
+end
+
+config_needs_reload = postgresql_configuration.select do |key, value|
+  reloadable_parameters.include? key
+end
+
 template "#{node['postgresql']['dir']}/postgresql.conf" do
   source "postgresql.conf.erb"
   owner "postgres"
   group "postgres"
   mode 0600
   variables(
-    config: postgresql_configuration.sort,
+    config: config_needs_restart.sort
   )
   notifies change_notify, "service[postgresql]", :immediately
+end
+
+template "#{node['postgresql']['dir']}/postgresql_reloadable.conf" do
+  source "postgresql_reloadable.conf.erb"
+  owner "postgres"
+  group "postgres"
+  mode "0600"
+  variables(
+    config: config_needs_reload.sort
+  )
+  notifies :run, "bash[reload-postgresql-configuration]", :immediately
 end
 
 template "#{node['postgresql']['dir']}/pg_hba.conf" do
@@ -184,3 +207,16 @@ bash "assign-db_maker-password" do
   only_if only_if_command if ha_enabled
   action :run
 end
+
+# Reload the configuration file
+# We use the SQL interface for that. This way it will work
+# in clustered mode as well, no matter which node runs it
+# first
+bash "reload-postgresql-configuration" do
+  user "postgres"
+  code <<-EOH
+    echo "SELECT pg_reload_conf();" | psql
+  EOH
+  action :nothing
+end
+
