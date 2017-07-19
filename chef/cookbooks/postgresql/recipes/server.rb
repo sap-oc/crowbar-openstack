@@ -98,11 +98,31 @@ end
 
 change_notify = node["postgresql"]["server"]["config_change_notify"]
 
+raw_configuration = node["postgresql"]["config"]
+postgresql_configuration = {}
+raw_configuration.each do |key, value|
+  next if value.nil?
+  formatted_value = case value
+  when String
+    "'#{value}'"
+  when TrueClass
+    "on"
+  when FalseClass
+    "off"
+  else
+    value
+  end
+  postgresql_configuration[key] = formatted_value
+end
+
 template "#{node['postgresql']['dir']}/postgresql.conf" do
   source "postgresql.conf.erb"
   owner "postgres"
   group "postgres"
   mode 0600
+  variables(
+    config: postgresql_configuration.sort,
+  )
   notifies change_notify, "service[postgresql]", :immediately
 end
 
