@@ -27,6 +27,14 @@
             "max_header_line": { "type": "int", "required": true },
             "trusted_flavors": { "type": "bool", "required": true },
             "use_migration": { "type": "bool", "required": true },
+            "image_cache_manager_interval": { "type": "int", "required": true },
+            "migration": {
+              "type": "map",
+              "required": true,
+              "mapping": {
+                "network": { "type": "str", "required": true }
+              }
+            },
             "cross_az_attach": { "type": "bool", "required": true },
             "setup_shared_instance_storage": { "type": "bool", "required": true },
             "use_shared_instance_storage": { "type": "bool", "required": true },
@@ -86,6 +94,7 @@
                 "zvm_xcat_server": { "type": "str", "required": true },
                 "zvm_xcat_username": { "type": "str", "required": true },
                 "zvm_xcat_password": { "type": "str", "required": true },
+                "zvm_xcat_network": { "type": "str", "required": true },
                 "zvm_diskpool": { "type": "str", "required": true },
                 "zvm_diskpool_type": { "type": "str", "required": true },
                 "zvm_host": { "type": "str", "required": true },
@@ -93,6 +102,9 @@
                 "zvm_user_profile": { "type": "str", "required": true },
                 "zvm_xcat_master": { "type": "str", "required": true },
                 "zvm_image_default_password": { "type": "str", "required": true },
+                "zvm_user_default_password": { "type": "str", "required": true },
+                "zvm_user_default_privilege": { "type": "str", "required": true },
+                "zvm_reachable_timeout": { "type": "int", "required": true },
                 "zvm_config_drive_inject_password": { "type": "bool", "required": true },
                 "zvm_xcat_ssh_key": { "type": "str", "required": true }
               }
