@@ -1,7 +1,7 @@
 def upgrade(ta, td, a, d)
   unless a.key? "use_l2pop"
     # Only enable it if DVR is used
-    a["use_l2pop"] = true
+    a["use_l2pop"] = a["use_dvr"]
   end
 
   return a, d
