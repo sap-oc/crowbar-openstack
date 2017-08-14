@@ -27,6 +27,7 @@
             "pool_timeout": { "type": "int", "required": true },
             "rpc_response_timeout": { "type": "int", "required": true },
             "use_multi_backend": { "type": "bool", "required": true },
+            "use_multipath": { "type": "bool", "required": true },
             "volume_defaults": {
               "type": "map",
               "required": true,
@@ -96,6 +97,12 @@
                     "iscsi_ip": { "type": "str", "required": true }
                 }
                 },
+                "nfs": {
+                "type": "map", "mapping": {
+                    "nfs_shares": { "type": "str", "required": true },
+                    "nfs_mount_options": { "type": "str", "required": true }
+                }
+                },
                 "rbd": {
                 "type": "map", "mapping": {
                     "use_crowbar": { "type": "bool", "required": true },
@@ -116,6 +123,33 @@
                     "ca_file": { "type": "str", "required": true },
                     "insecure": { "type" : "bool", "required" : true }
                   }
+                },
+                "hitachi": {
+                "type": "map", "mapping": {
+                  "storage_protocol": { "type" : "str", "required" : true },
+                  "hitachi_add_chap_user": { "type" : "bool", "required" : true },
+                  "hitachi_async_copy_check_interval": { "type": "int", "required": true },
+                  "hitachi_auth_method": { "type": "str", "required": true },
+                  "hitachi_auth_password": { "type": "str", "required": true },
+                  "hitachi_auth_user": { "type": "str", "required": true },
+                  "hitachi_copy_check_interval": { "type": "int", "required": true },
+                  "hitachi_copy_speed": { "type": "int", "required": true },
+                  "hitachi_default_copy_method": { "type": "str", "required": true },
+                  "hitachi_group_range": { "type": "str", "required": true },
+                  "hitachi_group_request": { "type" : "bool", "required" : true },
+                  "hitachi_horcm_add_conf": { "type" : "bool", "required" : true },
+                  "hitachi_horcm_numbers": { "type": "str", "required": true },
+                  "hitachi_horcm_password": { "type": "str", "required": true },
+                  "hitachi_horcm_resource_lock_timeout": { "type": "int", "required": true },
+                  "hitachi_horcm_user": { "type": "str", "required": true },
+                  "hitachi_ldev_range": { "type": "str", "required": true },
+                  "hitachi_pool_id": { "type": "str", "required": true },
+                  "hitachi_serial_number": { "type": "str", "required": true },
+                  "hitachi_target_ports": { "type": "str", "required": true },
+                  "hitachi_thin_pool_id": { "type": "str", "required": true },
+                  "hitachi_unit_name": { "type": "str", "required": true },
+                  "hitachi_zoning_request": { "type" : "bool", "required" : true }
+                 }
                 },
                 "manual": {
                 "type": "map", "mapping": {
@@ -199,6 +233,12 @@
                       "iscsi_ip": { "type": "str", "required": true }
                     }
                   },
+                  "nfs": {
+                    "type": "map", "mapping": {
+                      "nfs_shares": { "type": "str", "required": true },
+                      "nfs_mount_options": { "type": "str", "required": true }
+                    }
+                  },
                   "rbd": {
                     "type": "map", "mapping": {
                       "use_crowbar": { "type": "bool", "required": true },
@@ -220,6 +260,33 @@
                       "insecure": { "type" : "bool", "required" : true }
                     }
                   },
+                  "hitachi": {
+                    "type": "map", "mapping": {
+                      "storage_protocol": { "type" : "str", "required" : true },
+                      "hitachi_add_chap_user": { "type" : "bool", "required" : true },
+                      "hitachi_async_copy_check_interval": { "type": "int", "required": true },
+                      "hitachi_auth_method": { "type": "str", "required": true },
+                      "hitachi_auth_password": { "type": "str", "required": true },
+                      "hitachi_auth_user": { "type": "str", "required": true },
+                      "hitachi_copy_check_interval": { "type": "int", "required": true },
+                      "hitachi_copy_speed": { "type": "int", "required": true },
+                      "hitachi_default_copy_method": { "type": "str", "required": true },
+                      "hitachi_group_range": { "type": "str", "required": true },
+                      "hitachi_group_request": { "type" : "bool", "required" : true },
+                      "hitachi_horcm_add_conf": { "type" : "bool", "required" : true },
+                      "hitachi_horcm_numbers": { "type": "str", "required": true },
+                      "hitachi_horcm_password": { "type": "str", "required": true },
+                      "hitachi_horcm_resource_lock_timeout": { "type": "int", "required": true },
+                      "hitachi_horcm_user": { "type": "str", "required": true },
+                      "hitachi_ldev_range": { "type": "str", "required": true },
+                      "hitachi_pool_id": { "type": "str", "required": true },
+                      "hitachi_serial_number": { "type": "str", "required": true },
+                      "hitachi_target_ports": { "type": "str", "required": true },
+                      "hitachi_thin_pool_id": { "type": "str", "required": true },
+                      "hitachi_unit_name": { "type": "str", "required": true },
+                      "hitachi_zoning_request": { "type" : "bool", "required" : true }
+                      }
+                    },
                   "manual": {
                     "type": "map", "mapping": {
                       "driver": { "type": "str", "required": true },
