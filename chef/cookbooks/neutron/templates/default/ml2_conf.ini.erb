@@ -135,3 +135,8 @@ vxlan_group = <%= @vxlan_mcast_group %>
 # Use ipset to speed-up the iptables security groups. Enabling ipset support
 # requires that ipset is installed on L2 agent node.
 # enable_ipset = True
+<% unless @l2pop_settings.nil? -%>
+
+[l2pop]
+agent_boot_time = <%= @l2pop_settings[:agent_boot_time] || 180 %>
+<% end -%>

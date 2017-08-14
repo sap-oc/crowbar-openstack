@@ -224,7 +224,8 @@ when "ml2"
       vxlan_end: vni_end,
       vxlan_mcast_group: node[:neutron][:vxlan][:multicast_group],
       external_networks: physnets,
-      mtu_value: mtu_value
+      mtu_value: mtu_value,
+      l2pop_settings: node[:neutron][:l2pop]
     )
   end
 when "vmware"
