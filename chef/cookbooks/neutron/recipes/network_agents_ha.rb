@@ -18,6 +18,7 @@ use_lbaas_agent = node[:neutron][:use_lbaas]
 use_haproxy_with_lbaasv2 = node[:neutron][:use_lbaasv2] &&
   [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver])
 use_lbaasv2_with_f5 = node[:neutron][:use_lbaasv2] && node[:neutron][:lbaasv2_driver] == "f5"
+use_haproxy_with_lbaasv2 ||= use_lbaasv2_with_f5 && node[:neutron][:f5][:add_haproxy_as_non_default]
 
 if use_l3_agent
   # do the setup required for neutron-ha-tool
