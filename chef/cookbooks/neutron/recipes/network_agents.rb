@@ -24,17 +24,16 @@ use_lbaasv1_or_lbaasv2_with_haproxy = node[:neutron][:use_lbaas] &&
 use_lbaasv2_with_f5 = node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
   node[:neutron][:lbaasv2_driver] == "f5"
 
-if node[:neutron][:use_lbaas]
+if use_lbaasv1_or_lbaasv2_with_haproxy
   if node[:neutron][:use_lbaasv2]
-    if [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver])
-      package node[:neutron][:platform][:lbaasv2_agent_pkg]
-    elsif node[:neutron][:lbaasv2_driver] == "f5" &&
-        !node[:neutron][:platform][:f5_agent_pkg].empty?
-      package node[:neutron][:platform][:f5_agent_pkg]
-    end
+    package node[:neutron][:platform][:lbaasv2_agent_pkg]
   else
     package node[:neutron][:platform][:lbaas_agent_pkg]
   end
+end
+
+if use_lbaasv2_with_f5  && !node[:neutron][:platform][:f5_agent_pkg].empty?
+  package node[:neutron][:platform][:f5_agent_pkg]
 end
 
 # Enable ip forwarding on network node for SLE11
