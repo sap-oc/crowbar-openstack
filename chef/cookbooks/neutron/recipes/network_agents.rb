@@ -21,6 +21,8 @@ package node[:neutron][:platform][:metering_agent_pkg]
 
 use_lbaasv1_or_lbaasv2_with_haproxy = node[:neutron][:use_lbaas] &&
   (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+use_lbaasv2_with_f5 = node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
+  node[:neutron][:lbaasv2_driver] == "f5"
 
 if node[:neutron][:use_lbaas]
   if node[:neutron][:use_lbaasv2]
@@ -158,8 +160,7 @@ if use_lbaasv1_or_lbaasv2_with_haproxy
       device_driver: device_driver
     )
   end
-elsif node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
-    node[:neutron][:lbaasv2_driver] == "f5"
+elsif use_lbaasv2_with_f5
   ml2_type_drivers = node[:neutron][:ml2_type_drivers]
   keystone_settings = KeystoneHelper.keystone_settings(node, @cookbook_name)
 
@@ -211,8 +212,7 @@ if use_lbaasv1_or_lbaasv2_with_haproxy
     subscribes :restart, resources("template[/etc/neutron/lbaas_agent.ini]")
     provider Chef::Provider::CrowbarPacemakerService if ha_enabled
   end
-elsif node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
-    node[:neutron][:lbaasv2_driver] == "f5"
+elsif use_lbaasv2_with_f5
   service node[:neutron][:platform][:f5_agent_name] do
     supports status: true, restart: true
     action [:enable, :start]
