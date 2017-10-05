@@ -19,6 +19,9 @@ include_recipe "neutron::common_agent"
 package node[:neutron][:platform][:dhcp_agent_pkg]
 package node[:neutron][:platform][:metering_agent_pkg]
 
+use_lbaasv1_or_lbaasv2_with_haproxy = node[:neutron][:use_lbaas] &&
+  (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+
 if node[:neutron][:use_lbaas]
   if node[:neutron][:use_lbaasv2]
     if [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver])
@@ -137,8 +140,7 @@ template "/etc/neutron/dhcp_agent.ini" do
   )
 end
 
-if node[:neutron][:use_lbaas] &&
-    (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+if use_lbaasv1_or_lbaasv2_with_haproxy
   device_driver = if node[:neutron][:use_lbaasv2]
     "neutron_lbaas.drivers.haproxy.namespace_driver.HaproxyNSDriver"
   else
@@ -195,8 +197,7 @@ service node[:neutron][:platform][:metering_agent_name] do
   provider Chef::Provider::CrowbarPacemakerService if ha_enabled
 end
 
-if node[:neutron][:use_lbaas] &&
-    (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+if use_lbaasv1_or_lbaasv2_with_haproxy
   lbaas_agent = if node[:neutron][:use_lbaasv2]
     node[:neutron][:platform][:lbaasv2_agent_name]
   else
