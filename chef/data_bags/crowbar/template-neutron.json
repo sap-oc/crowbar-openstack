@@ -46,6 +46,7 @@
       },
       "f5": {
         "ha_type": "standalone",
+        "add_haproxy_as_non_default": false,
         "icontrol_hostname": "",
         "icontrol_username": "admin",
         "icontrol_password": "",
@@ -116,7 +117,7 @@
     "neutron": {
       "crowbar-revision": 0,
       "crowbar-applied": false,
-      "schema-revision": 55,
+      "schema-revision": 56,
       "element_states": {
         "neutron-server": [ "readying", "ready", "applying" ],
         "neutron-network": [ "readying", "ready", "applying" ]

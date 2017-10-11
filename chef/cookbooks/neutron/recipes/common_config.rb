@@ -172,6 +172,12 @@ if neutron[:neutron][:use_lbaas]
     interface_driver = "neutron.agent.linux.interface.BridgeInterfaceDriver"
   end
 
+  add_haproxy_as_non_default = if neutron[:neutron][:lbaasv2_driver] == "f5"
+    neutron[:neutron][:f5]["add_haproxy_as_non_default"]
+  else
+    false
+  end
+
   template "/etc/neutron/neutron_lbaas.conf" do
     source "neutron_lbaas.conf.erb"
     owner "root"
@@ -182,7 +188,8 @@ if neutron[:neutron][:use_lbaas]
       use_lbaas: neutron[:neutron][:use_lbaas],
       use_lbaasv2: neutron[:neutron][:use_lbaasv2],
       lbaasv2_driver: neutron[:neutron][:lbaasv2_driver],
-      keystone_settings: keystone_settings
+      keystone_settings: keystone_settings,
+      add_haproxy_as_non_default: add_haproxy_as_non_default
     )
   end
 end

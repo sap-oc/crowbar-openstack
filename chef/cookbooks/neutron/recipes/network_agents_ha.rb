@@ -15,6 +15,10 @@
 
 use_l3_agent = (node[:neutron][:networking_plugin] != "vmware")
 use_lbaas_agent = node[:neutron][:use_lbaas]
+use_haproxy_with_lbaasv2 = node[:neutron][:use_lbaasv2] &&
+  [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver])
+use_lbaasv2_with_f5 = node[:neutron][:use_lbaasv2] && node[:neutron][:lbaasv2_driver] == "f5"
+use_haproxy_with_lbaasv2 ||= use_lbaasv2_with_f5 && node[:neutron][:f5][:add_haproxy_as_non_default]
 
 if use_l3_agent
   # do the setup required for neutron-ha-tool
@@ -119,8 +123,7 @@ end
 group_members << metering_agent_primitive
 transaction_objects << "pacemaker_primitive[#{metering_agent_primitive}]"
 
-if use_lbaas_agent && node[:neutron][:use_lbaasv2] &&
-    [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver])
+if use_lbaas_agent && use_haproxy_with_lbaasv2
   lbaas_agent_primitive = "neutron-lbaasv2-agent"
   pacemaker_primitive lbaas_agent_primitive do
     agent node[:neutron][:ha][:network][:lbaasv2_ra]
@@ -165,7 +168,7 @@ transaction_objects << "pacemaker_clone[#{agents_clone_name}]"
 location_name = openstack_pacemaker_controller_only_location_for agents_clone_name
 transaction_objects << "pacemaker_location[#{location_name}]"
 
-if use_lbaas_agent && node[:neutron][:use_lbaasv2] && node[:neutron][:lbaasv2_driver] == "f5"
+if use_lbaas_agent && use_lbaasv2_with_f5
   # Note: this won't end up in the group as F5 users don't want this to be
   # impacted by other services
   f5_agent_primitive = "neutron-f5-agent"

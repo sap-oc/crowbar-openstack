@@ -19,17 +19,22 @@ include_recipe "neutron::common_agent"
 package node[:neutron][:platform][:dhcp_agent_pkg]
 package node[:neutron][:platform][:metering_agent_pkg]
 
-if node[:neutron][:use_lbaas]
+use_lbaasv1_or_lbaasv2_with_haproxy = node[:neutron][:use_lbaas] &&
+  (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+use_lbaasv2_with_f5 = node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
+  node[:neutron][:lbaasv2_driver] == "f5"
+use_lbaasv1_or_lbaasv2_with_haproxy ||= use_lbaasv2_with_f5 && node[:neutron][:f5][:add_haproxy_as_non_default]
+
+if use_lbaasv1_or_lbaasv2_with_haproxy
   if node[:neutron][:use_lbaasv2]
-    if [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver])
-      package node[:neutron][:platform][:lbaas_agent_pkg]
-    elsif node[:neutron][:lbaasv2_driver] == "f5" &&
-        !node[:neutron][:platform][:f5_agent_pkg].empty?
-      package node[:neutron][:platform][:f5_agent_pkg]
-    end
-  else
     package node[:neutron][:platform][:lbaasv2_agent_pkg]
+  else
+    package node[:neutron][:platform][:lbaas_agent_pkg]
   end
+end
+
+if use_lbaasv2_with_f5  && !node[:neutron][:platform][:f5_agent_pkg].empty?
+  package node[:neutron][:platform][:f5_agent_pkg]
 end
 
 # Enable ip forwarding on network node for SLE11
@@ -137,8 +142,7 @@ template "/etc/neutron/dhcp_agent.ini" do
   )
 end
 
-if node[:neutron][:use_lbaas] &&
-    (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+if use_lbaasv1_or_lbaasv2_with_haproxy
   device_driver = if node[:neutron][:use_lbaasv2]
     "neutron_lbaas.drivers.haproxy.namespace_driver.HaproxyNSDriver"
   else
@@ -156,8 +160,9 @@ if node[:neutron][:use_lbaas] &&
       device_driver: device_driver
     )
   end
-elsif node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
-    node[:neutron][:lbaasv2_driver] == "f5"
+end
+
+if use_lbaasv2_with_f5
   ml2_type_drivers = node[:neutron][:ml2_type_drivers]
   keystone_settings = KeystoneHelper.keystone_settings(node, @cookbook_name)
 
@@ -195,8 +200,7 @@ service node[:neutron][:platform][:metering_agent_name] do
   provider Chef::Provider::CrowbarPacemakerService if ha_enabled
 end
 
-if node[:neutron][:use_lbaas] &&
-    (!node[:neutron][:use_lbaasv2] || [nil, "", "haproxy"].include?(node[:neutron][:lbaasv2_driver]))
+if use_lbaasv1_or_lbaasv2_with_haproxy
   lbaas_agent = if node[:neutron][:use_lbaasv2]
     node[:neutron][:platform][:lbaasv2_agent_name]
   else
@@ -210,8 +214,9 @@ if node[:neutron][:use_lbaas] &&
     subscribes :restart, resources("template[/etc/neutron/lbaas_agent.ini]")
     provider Chef::Provider::CrowbarPacemakerService if ha_enabled
   end
-elsif node[:neutron][:use_lbaas] && node[:neutron][:use_lbaasv2] &&
-    node[:neutron][:lbaasv2_driver] == "f5"
+end
+
+if use_lbaasv2_with_f5
   service node[:neutron][:platform][:f5_agent_name] do
     supports status: true, restart: true
     action [:enable, :start]

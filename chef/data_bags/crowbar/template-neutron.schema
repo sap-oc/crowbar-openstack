@@ -83,6 +83,7 @@
                     }},
                     "f5": { "type": "map", "required": true, "mapping": {
                       "ha_type": { "type" : "str", "required" : true },
+                      "add_haproxy_as_non_default": { "type": "bool", "required": true },
                       "icontrol_hostname": { "type" : "str", "required" : true },
                       "icontrol_username": { "type" : "str", "required" : true },
                       "icontrol_password": { "type" : "str", "required" : true },
