@@ -51,6 +51,9 @@ else
   search_env_filtered(:node, "roles:nova-controller").first
 end
 
+# use nova-rootwrap daemon on compute-only nodes
+use_rootwrap_daemon = !node["roles"].include?("nova-controller")
+
 api_ha_enabled = api[:nova][:ha][:enabled]
 admin_api_host = CrowbarHelper.get_host_for_admin_url(api, api_ha_enabled)
 public_api_host = CrowbarHelper.get_host_for_public_url(api, api[:nova][:ssl][:enabled], api_ha_enabled)
@@ -334,6 +337,7 @@ template "/etc/nova/nova.conf" do
             ssl_key_file: api_ssl_keyfile,
             ssl_cert_required: api[:nova][:ssl][:cert_required],
             ssl_ca_file: api_ssl_cafile,
+            use_rootwrap_daemon: use_rootwrap_daemon,
             oat_appraiser_host: oat_server[:hostname],
             oat_appraiser_port: "8443",
             has_itxt: has_itxt,
