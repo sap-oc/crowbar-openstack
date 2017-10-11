@@ -24,6 +24,7 @@
 ::Chef::Recipe.send(:include, Opscode::OpenSSL::Password)
 
 include_recipe "postgresql::client"
+include_recipe "postgresql::config_pgtune"
 
 # For Crowbar, we need to set the address to bind - default to admin node.
 newaddr = CrowbarDatabaseHelper.get_listen_address(node)
