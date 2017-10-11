@@ -8,6 +8,7 @@
       "password": "",
       "user": "nova",
       "vhost": "/nova",
+      "cluster": true,
       "ha": {
         "storage": {
           "mode": "shared",

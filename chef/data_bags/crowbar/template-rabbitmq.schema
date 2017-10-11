@@ -17,6 +17,7 @@
             "password": { "type": "str", "required": true },
             "user": { "type": "str", "required": true },
             "vhost": { "type": "str", "required": true },
+            "cluster": { "type": "bool", "required": false },
             "ha" : {
               "type": "map",
               "required": true,

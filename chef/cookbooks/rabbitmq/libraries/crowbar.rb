@@ -8,7 +8,7 @@ module CrowbarRabbitmqHelper
   end
 
   def self.get_listen_address(node)
-    if node[:rabbitmq][:ha][:enabled]
+    if node[:rabbitmq][:ha][:enabled] && !node[:rabbitmq][:cluster]
       vhostname = get_ha_vhostname(node)
       net_db = Chef::DataBagItem.load("crowbar", "admin_network").raw_data
       net_db["allocated_by_name"]["#{vhostname}.#{node[:domain]}"]["address"]
@@ -18,7 +18,7 @@ module CrowbarRabbitmqHelper
   end
 
   def self.get_public_listen_address(node)
-    if node[:rabbitmq][:ha][:enabled]
+    if node[:rabbitmq][:ha][:enabled] && !node[:rabbitmq][:cluster]
       vhostname = get_ha_vhostname(node)
       net_db = Chef::DataBagItem.load("crowbar", "public_network").raw_data
       net_db["allocated_by_name"]["#{vhostname}.#{node[:domain]}"]["address"]

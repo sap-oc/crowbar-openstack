@@ -109,27 +109,65 @@ class CrowbarOpenStackHelper
     end
 
     if @rabbitmq_settings && @rabbitmq_settings.include?(instance)
-      Chef::Log.info("RabbitMQ server found at #{@rabbitmq_settings[instance][:address]} [cached]")
+      Chef::Log.info("RabbitMQ settings found [cached]")
     else
       @rabbitmq_settings ||= Hash.new
-      rabbit = get_node(node, "rabbitmq-server", "rabbitmq", instance)
+      rabbits = get_nodes(node, "rabbitmq-server", "rabbitmq", instance)
 
-      if rabbit.nil?
+      if rabbits.empty?
         Chef::Log.warn("No RabbitMQ server found!")
       else
-        @rabbitmq_settings[instance] = {
-          address: rabbit[:rabbitmq][:address],
-          port: rabbit[:rabbitmq][:port],
-          user: rabbit[:rabbitmq][:user],
-          password: rabbit[:rabbitmq][:password],
-          vhost: rabbit[:rabbitmq][:vhost],
-          url: "rabbit://#{rabbit[:rabbitmq][:user]}:" \
-            "#{rabbit[:rabbitmq][:password]}@" \
-            "#{rabbit[:rabbitmq][:address]}:#{rabbit[:rabbitmq][:port]}/" \
-            "#{rabbit[:rabbitmq][:vhost]}"
-        }
+        one_rabbit = rabbits.first
 
-        Chef::Log.info("RabbitMQ server found at #{@rabbitmq_settings[instance][:address]}")
+        if one_rabbit[:rabbitmq][:cluster]
+          rabbit_hosts = rabbits.map do |rabbit|
+            port = rabbit[:rabbitmq][:port]
+
+            "#{rabbit[:rabbitmq][:user]}:" \
+            "#{rabbit[:rabbitmq][:password]}@" \
+            "#{rabbit[:rabbitmq][:address]}:#{port}"
+          end
+
+          rabbit_node_names = rabbits.map do |rabbit_node|
+            "\'rabbit@#{rabbit_node.name}\'"
+          end
+
+          cluster_nodes = rabbit_node_names.join(",")
+
+          @rabbitmq_settings[instance] = {
+            clustered: true,
+            ha_queues: true,
+            durable_queues: true,
+            use_legacy_configuration: false,
+            url: "rabbit://#{rabbit_hosts.sort.join(",")}/" \
+              "#{one_rabbit[:rabbitmq][:vhost]}",
+            pacemaker_resource: "ms-rabbitmq",
+            cluster_nodes: cluster_nodes
+          }
+          Chef::Log.info("RabbitMQ cluster found")
+        else
+          rabbit = one_rabbit
+          port = rabbit[:rabbitmq][:port]
+
+          @rabbitmq_settings[instance] = {
+            clustered: false,
+            ha_queues: false,
+            durable_queues: false,
+            use_legacy_configuration: true,
+            address: rabbit[:rabbitmq][:address],
+            port: rabbit[:rabbitmq][:port],
+            user: rabbit[:rabbitmq][:user],
+            password: rabbit[:rabbitmq][:password],
+            vhost: rabbit[:rabbitmq][:vhost],
+            url: "rabbit://#{rabbit[:rabbitmq][:user]}:" \
+              "#{rabbit[:rabbitmq][:password]}@" \
+              "#{rabbit[:rabbitmq][:address]}:#{port}/" \
+              "#{rabbit[:rabbitmq][:vhost]}",
+            pacemaker_resource: "rabbitmq"
+          }
+
+          Chef::Log.info("RabbitMQ server found")
+        end
       end
     end
 
@@ -152,5 +190,10 @@ class CrowbarOpenStackHelper
     end
 
     result
+  end
+
+  def self.get_nodes(node, role, barclamp, instance)
+    nodes, _, _ = Chef::Search::Query.new.search(:node, "roles:#{role} AND #{barclamp}_config_environment:#{barclamp}-config-#{instance}")
+    nodes
   end
 end

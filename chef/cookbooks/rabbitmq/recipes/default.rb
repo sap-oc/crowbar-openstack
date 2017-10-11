@@ -36,12 +36,25 @@ template "/etc/rabbitmq/rabbitmq-env.conf" do
   notifies :restart, "service[rabbitmq-server]"
 end
 
+rabbit_settings = fetch_rabbitmq_settings
+if rabbit_settings[:clustered]
+  add_cluster_section = true
+  cluster_nodes = rabbit_settings[:cluster_nodes]
+else
+  add_cluster_section = false
+  cluster_nodes = ""
+end
+
 template "/etc/rabbitmq/rabbitmq.config" do
   source "rabbitmq.config.erb"
   owner "root"
   group "root"
   mode 0644
   notifies :restart, "service[rabbitmq-server]"
+  variables(
+    add_cluster_section: add_cluster_section,
+    cluster_nodes: cluster_nodes
+  )
 end
 
 case node[:platform_family]

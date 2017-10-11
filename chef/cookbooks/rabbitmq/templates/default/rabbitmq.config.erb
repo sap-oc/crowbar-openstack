@@ -4,6 +4,12 @@
    {tcp_listeners, [
                     <%= node[:rabbitmq][:addresses].map { |address| "{\"#{address}\", #{node[:rabbitmq][:port]}}" }.join(", ") %>
                    ]},
+<% if @add_cluster_section -%>
+   {cluster_nodes, {[
+                     <%= @cluster_nodes %>
+                    ], disc}
+   },
+<% end -%>
    {disk_free_limit, 50000000}
   ]
  },

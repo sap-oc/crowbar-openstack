@@ -47,6 +47,7 @@ crowbar_pacemaker_sync_mark "sync-manila_before_ha"
 # Avoid races when creating pacemaker resources
 crowbar_pacemaker_sync_mark "wait-manila_ha_resources"
 
+rabbit_settings = fetch_rabbitmq_settings
 transaction_objects = []
 
 api_primitive = "manila-api"
@@ -98,7 +99,7 @@ pacemaker_transaction "manila controller" do
 end
 
 crowbar_pacemaker_order_only_existing "o-#{clone_name}" do
-  ordering ["postgresql", "rabbitmq", "cl-keystone", "cl-glance", "cl-cinder",
+  ordering ["postgresql", "#{rabbit_settings[:pacemaker_resource]}", "cl-keystone", "cl-glance", "cl-cinder",
             "cl-neutron", "cl-nova", clone_name]
   score "Optional"
   action :create
