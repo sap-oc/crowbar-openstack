@@ -44,6 +44,7 @@
           "storage_family": "ontap_7mode",
           "storage_protocol": "iscsi",
           "nfs_shares": "",
+          "nfs_mount_options": "",
           "vserver": "",
           "netapp_server_hostname": "192.168.124.11",
           "netapp_server_port": 443,

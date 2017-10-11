@@ -39,6 +39,12 @@
 
     %fieldset
       %legend
+        = t(".libvirt_header")
+
+      = string_field :libvirt_nfs_mount_options
+
+    %fieldset
+      %legend
         = t(".vmware_header")
 
       = string_field %w(vcenter host)
