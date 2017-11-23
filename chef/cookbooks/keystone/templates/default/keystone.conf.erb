@@ -15,6 +15,7 @@ driver = <%= node[:keystone][:assignment][:driver] %>
 backend = oslo_cache.memcache_pool
 enabled = True
 memcache_servers = <%= @memcached_servers.join(',') %>
+memcache_socket_timeout = 1
 
 [database]
 connection = <%= @sql_connection %>
@@ -112,6 +113,7 @@ rabbit_use_ssl = <%= @rabbit_settings[:use_ssl] %>
 <% if @rabbit_settings[:client_ca_certs] -%>
 kombu_ssl_ca_certs = <%= @rabbit_settings[:client_ca_certs] %>
 <% end -%>
+heartbeat_timeout_threshold = <%= @rabbit_settings[:heartbeat_timeout] %>
 
 [oslo_policy]
 policy_file = <%= node[:keystone][:policy_file] %>
