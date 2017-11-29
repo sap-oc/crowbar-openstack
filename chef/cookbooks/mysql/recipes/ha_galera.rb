@@ -56,7 +56,8 @@ unless node[:database][:galera_bootstrapped]
         sstuser: "root",
         sstuser_password: "",
         expire_logs_days: node[:database][:mysql][:expire_logs_days],
-        node_address: node_address
+        node_address: node_address,
+        wsrep_slave_threads: node[:database][:mysql][:wsrep_slave_threads]
       )
     end
 
@@ -136,7 +137,8 @@ template "/etc/my.cnf.d/galera.cnf" do
     sstuser: "sstuser",
     sstuser_password: node[:database][:mysql][:sstuser_password],
     expire_logs_days: node[:database][:mysql][:expire_logs_days],
-    node_address: node_address
+    node_address: node_address,
+    wsrep_slave_threads: node[:database][:mysql][:wsrep_slave_threads]
   )
 end
 
@@ -164,7 +166,7 @@ pacemaker_primitive service_name do
     "datadir" => node[:database][:mysql][:datadir],
     "log" => "/var/log/mysql/mysql_error.log"
   })
-  op node[:mysql][:ha][:op]
+  op node[:database][:mysql][:ha][:op]
   action :update
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
 end
@@ -246,7 +248,8 @@ crowbar_pacemaker_sync_mark "sync-database_boostrapped" do
 end
 
 execute "assign-root-password-galera" do
-  command "/usr/bin/mysqladmin -u root password \"#{node[:mysql][:server_root_password]}\""
+  command "/usr/bin/mysqladmin -u root \
+    password \"#{node[:database][:mysql][:server_root_password]}\""
   action :run
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
   only_if "/usr/bin/mysql -u root -e 'show databases;'"
