@@ -1,5 +1,5 @@
 #
-# Copyright 2011, Dell
+# Copyright 2017 SUSE Linux GmbH
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Author: andi abes
-# Author: Judd Maltin
-#
 
-case node[:platform_family]
-when "suse", "rhel"
-  package "openstack-swift-account"
-else
-  package "swift-account"
-end
+actions :create
+default_action :create
+
+attribute :name, regex: /[^\n]/, required: true
+attribute :is_default, required: false, default: false
+attribute :insecure, required: false, default: true
+attribute :user_name, kind_of: String, required: true
+attribute :password, kind_of: String, required: true
+attribute :grafana_url, kind_of: String, required: true
+attribute :proxy_url, kind_of: String, required: true
