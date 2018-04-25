@@ -19,10 +19,9 @@
 
 resource_agent = "ocf:heartbeat:galera"
 
-["galera-3-wsrep-provider", "mariadb-tools", "xtrabackup", "socat"].each do |p|
+node[:mysql][:galera_packages].each do |p|
   package p
 end
-package "galera-python-clustercheck" if node[:mysql][:ha][:clustercheck]
 
 unless node[:database][:galera_bootstrapped]
   directory "/var/run/mysql/" do
@@ -142,6 +141,27 @@ template "/etc/my.cnf.d/galera.cnf" do
   )
 end
 
+# Configuration files for galera-python-clustercheck
+template "/etc/galera-python-clustercheck/galera-python-clustercheck.conf" do
+  source "galera-python-clustercheck.conf.erb"
+  owner "galera-python-clustercheck"
+  group "mysql"
+  mode "0640"
+  variables(
+    node_address: node_address
+  )
+end
+
+template "/etc/galera-python-clustercheck/my.cnf" do
+  source "galera-python-clustercheck-my.cnf.erb"
+  owner "galera-python-clustercheck"
+  group "mysql"
+  mode "0640"
+  variables(
+    node_address: node_address
+  )
+end
+
 # Wait for all nodes to reach this point so we know that all nodes will have
 # all the required packages and configurations installed before we create the
 # pacemaker resources
@@ -156,6 +176,12 @@ crowbar_pacemaker_sync_mark "wait-database_ha_resources" do
   revision node[:database]["crowbar-revision"]
 end
 
+# some of the op attributes are now in the proposal, so we need to merge the
+# default attributes and the proposal attributes (that actually completely
+# override the default attributes, even the ones not defined in the proposal)
+primitive_op = node.default_attrs[:mysql][:ha][:op].to_hash
+primitive_op.merge!(node[:database][:mysql][:ha][:op].to_hash)
+
 pacemaker_primitive service_name do
   agent resource_agent
   params({
@@ -166,7 +192,7 @@ pacemaker_primitive service_name do
     "datadir" => node[:database][:mysql][:datadir],
     "log" => "/var/log/mysql/mysql_error.log"
   })
-  op node[:database][:mysql][:ha][:op]
+  op primitive_op
   action :update
   only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
 end
@@ -259,60 +285,42 @@ crowbar_pacemaker_sync_mark "sync-database_root_password" do
   revision node[:database]["crowbar-revision"]
 end
 
-if node[:mysql][:ha][:clustercheck]
-  # Configuration files for galera-python-clustercheck
-  template "/etc/galera-python-clustercheck/galera-python-clustercheck.conf" do
-    source "galera-python-clustercheck.conf.erb"
-    owner "galera-python-clustercheck"
-    group "mysql"
-    mode "0640"
-    variables(
-      node_address: node_address
-    )
-  end
+# Start galera-clustercheck which serves the cluster state as http return codes
+# on port 5555
+transaction_objects = []
+service_name = "galera-python-clustercheck"
 
-  template "/etc/galera-python-clustercheck/my.cnf" do
-    source "galera-python-clustercheck-my.cnf.erb"
-    owner "galera-python-clustercheck"
-    group "mysql"
-    mode "0640"
-    variables(
-      node_address: node_address
-    )
-  end
+clustercheck_op = {}
+clustercheck_op["monitor"] = {}
+clustercheck_op["monitor"]["interval"] = "10s"
 
-  # Start galera-clustercheck which serves the cluster state as http return codes
-  # on port 5555
-  transaction_objects = []
-  service_name = "galera-python-clustercheck"
+pacemaker_primitive service_name do
+  agent "systemd:#{service_name}"
+  op clustercheck_op
+  action :update
+  only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
+end
 
-  pacemaker_primitive service_name do
-    agent "systemd:#{service_name}"
-    action :update
-    only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
-  end
+transaction_objects.push("pacemaker_primitive[#{service_name}]")
 
-  transaction_objects.push("pacemaker_primitive[#{service_name}]")
+clone_name = "cl-#{service_name}"
+pacemaker_clone clone_name do
+  rsc service_name
+  meta CrowbarPacemakerHelper.clone_meta(node, remote: false)
+  action :update
+  only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
+end
 
-  clone_name = "cl-#{service_name}"
-  pacemaker_clone clone_name do
-    rsc service_name
-    meta CrowbarPacemakerHelper.clone_meta(node, remote: false)
-    action :update
-    only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
-  end
+transaction_objects.push("pacemaker_clone[#{clone_name}]")
 
-  transaction_objects.push("pacemaker_clone[#{clone_name}]")
+clone_location_name = openstack_pacemaker_controller_only_location_for clone_name
+transaction_objects << "pacemaker_location[#{clone_location_name}]"
 
-  clone_location_name = openstack_pacemaker_controller_only_location_for clone_name
-  transaction_objects << "pacemaker_location[#{clone_location_name}]"
-
-  pacemaker_transaction "clustercheck" do
-    cib_objects transaction_objects
-    action :commit_new
-    only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
-  end
-end # if node[:mysql][:ha][:clustercheck]
+pacemaker_transaction "clustercheck" do
+  cib_objects transaction_objects
+  action :commit_new
+  only_if { CrowbarPacemakerHelper.is_cluster_founder?(node) }
+end
 
 include_recipe "crowbar-pacemaker::haproxy"
 
@@ -339,12 +347,8 @@ haproxy_loadbalancer "galera" do
   mode "tcp"
   # leave some room for pacemaker health checks
   max_connections node[:database][:mysql][:max_connections] - 10
-  if node[:mysql][:ha][:clustercheck]
-    options ["httpchk", "clitcpka"]
-    default_server "port 5555"
-  else
-    options ["mysql-check user monitoring", "clitcpka"]
-  end
+  options ["httpchk", "clitcpka"]
+  default_server "port 5555"
   stick ({ "on" => "dst" })
   servers ha_servers
   action :nothing

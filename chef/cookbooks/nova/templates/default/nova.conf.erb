@@ -34,9 +34,20 @@ reserved_host_memory_mb = <%= @reserved_host_memory %>
 cpu_allocation_ratio = <%= node[:nova][:scheduler][:cpu_allocation_ratio] %>
 ram_allocation_ratio = <%= node[:nova][:scheduler][:ram_allocation_ratio] %>
 disk_allocation_ratio = <%= node[:nova][:scheduler][:disk_allocation_ratio] %>
-<% if @use_baremetal_filters %>scheduler_use_baremetal_filters = true<% end -%>
-<% if @has_itxt -%>scheduler_available_filters = nova.scheduler.filters.standard_filters<% end %>
-<% if @has_itxt %>scheduler_default_filters = RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,TrustedFilter<% end %>
+<% if @use_baremetal_filters %>
+scheduler_use_baremetal_filters = true
+<% end -%>
+<% if @has_itxt %>
+scheduler_available_filters = nova.scheduler.filters.standard_filters
+<% if @default_filters.empty? %>
+scheduler_default_filters = RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,TrustedFilter
+<% else %>
+scheduler_default_filters = <%= @default_filters %>
+<% end %>
+<% elsif !@default_filters.empty? %>
+scheduler_available_filters = nova.scheduler.filters.all_filters
+scheduler_default_filters = <%= @default_filters %>
+<% end %>
 <% unless @track_instance_changes %>scheduler_tracks_instance_changes = false<% end %>
 <% if @libvirt_type.eql?('vmware') -%>
 compute_driver = vmwareapi.VMwareVCDriver
@@ -192,6 +203,9 @@ live_migration_flag = VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, VIR_MI
     <% else -%>
 block_migration_flag = VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_NON_SHARED_INC, VIR_MIGRATE_LIVE
     <% end -%>
+# Timeout migration if less than 1MB/s RAM can be copied
+live_migration_progress_timeout=0
+live_migration_completion_timeout=1000
   <% end -%>
 <% end -%>
 <%= "disk_prefix = xvd" if @libvirt_type.eql?('xen') %>

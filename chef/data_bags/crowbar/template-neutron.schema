@@ -19,6 +19,7 @@
                     "rpc_workers": { "type": "int", "required": true },
                     "use_lbaas": { "type": "bool", "required": true },
                     "lbaasv2_driver": { "type": "str", "required": true },
+                    "allow_automatic_lbaas_agent_failover": { "type": "bool", "required": true },
                     "use_l2pop": { "type": "bool", "required": true },
                     "l2pop": { "type": "map", "required": true, "mapping": {
                       "agent_boot_time": { "type" : "int", "required" : true }
@@ -50,21 +51,35 @@
                       "system_id": { "type" : "str", "required" : true },
                       "username": { "type" : "str", "required": true },
                       "password": { "type" : "str", "required": true },
-                      "opflex": { "type": "map", "required": true, "mapping": {
-                        "peer_ip": { "type": "str", "required" : true },
-                        "peer_port": { "type": "int", "required" : true },
-                        "encap": { "type": "str", "required": true },
-                        "vxlan": { "type": "map", "required": true, "mapping" : {
-                          "encap_iface": {"type": "str", "required": true },
-                          "uplink_iface": { "type": "str", "required": true },
-                          "uplink_vlan": { "type": "int", "required": true },
-                          "remote_ip": { "type": "str", "required": true },
-                          "remote_port": { "type": "int", "required": true }
-                        }},
-                        "vlan": { "type": "map", "required": true, "mapping": {
-                          "encap_iface": { "type": "str", "required": true }
-                        }}
+                      "optimized_metadata": { "type" : "bool", "required": true },
+                      "optimized_dhcp": { "type" : "bool", "required": true }, 
+                      "vpc_pairs": { "type": "str", "required": false },
+                      "ext_net": { "type" : "map", "required" : true, "mapping" : {
+                          "name": { "type" : "str", "required" : true },
+                          "preexisting": { "type" : "bool", "required" : true },
+                          "nat_enabled": { "type" : "bool", "required" : false },
+                          "ext_epg": { "type" : "str", "required" : true },
+                          "host_pool_cidr": { "type" : "str", "required" : true }
                       }},
+                      "opflex": { "type": "seq", "required": true, "sequence": [ {
+                        "type": "map", "required": true, "mapping": {
+                          "pod": { "type" : "str", "required" : false },
+                          "nodes": { "type" : "seq", "required" : true, "sequence": [ { "type": "str" } ] },
+                          "peer_ip": { "type": "str", "required" : true },
+                          "peer_port": { "type": "int", "required" : true },
+                          "encap": { "type": "str", "required": true },
+                          "vxlan": { "type": "map", "required": true, "mapping" : {
+                            "encap_iface": {"type": "str", "required": true },
+                            "uplink_iface": { "type": "str", "required": true },
+                            "uplink_vlan": { "type": "int", "required": true },
+                            "remote_ip": { "type": "str", "required": true },
+                            "remote_port": { "type": "int", "required": true }
+                          }},
+                          "vlan": { "type": "map", "required": true, "mapping": {
+                            "encap_iface": { "type": "str", "required": true }
+                          }}
+                        }
+                      } ] },
                       "apic_switches": { "type" : "map", "required" : true, "mapping" : {
                         = : { "type" : "map", "required" : true, "mapping" : {
                           "switch_ports": { "type" : "map", "required" : true, "mapping" : {

@@ -48,9 +48,11 @@ if is_controller
   include_recipe "#{db_settings[:backend_name]}::python-client"
 
   database_connection = fetch_database_connection_string(node[:nova][:db])
+  placement_database_connection = fetch_database_connection_string(node[:nova][:placement_db])
   api_database_connection = fetch_database_connection_string(node[:nova][:api_db])
 else
   database_connection = nil
+  placement_database_connection = nil
   api_database_connection = nil
 end
 
@@ -324,6 +326,21 @@ if need_shared_lock_path
   include_recipe "crowbar-openstack::common"
 end
 
+template node[:nova][:placement_config_file] do
+  source "nova-placement.conf.erb"
+  user "root"
+  group node[:nova][:group]
+  mode 0640
+  variables(
+  keystone_settings: keystone_settings,
+  placement_database_connection: placement_database_connection,
+  placement_service_user: node["nova"]["placement_service_user"],
+  placement_service_password: node["nova"]["placement_service_password"],
+  placement_service_insecure: node[:nova][:ssl][:insecure]
+  )
+end
+
+
 template node[:nova][:config_file] do
   source "nova.conf.erb"
   user "root"
@@ -388,6 +405,7 @@ template node[:nova][:config_file] do
     oat_appraiser_host: oat_server[:hostname],
     oat_appraiser_port: "8443",
     has_itxt: has_itxt,
+    default_filters: node[:nova][:scheduler][:default_filters],
     reserved_host_memory: reserved_host_memory,
     use_baremetal_filters: use_baremetal_filters,
     track_instance_changes: track_instance_changes,

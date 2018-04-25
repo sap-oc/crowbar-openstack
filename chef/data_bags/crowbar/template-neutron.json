@@ -14,6 +14,7 @@
       "rpc_workers": 1,
       "use_lbaas": true,
       "lbaasv2_driver": "haproxy",
+      "allow_automatic_lbaas_agent_failover": true,
       "use_l2pop": false,
       "l2pop": {
         "agent_boot_time": 180
@@ -45,7 +46,17 @@
         "system_id": "soc",
         "username": "admin",
         "password": "",
-        "opflex": {
+        "optimized_metadata": true,
+        "optimized_dhcp": true,
+        "ext_net": {
+          "name": "l3out",
+          "preexisting": true,
+          "ext_epg": "l3out-epg",
+          "host_pool_cidr": ""
+        },
+        "opflex": [{
+          "pod": "",
+          "nodes" : [],
           "peer_ip": "",
           "peer_port": 8009,
           "encap": "vxlan",
@@ -59,7 +70,7 @@
           "vlan": {
               "encap_iface": ""
           }
-        },
+        }],
         "apic_switches": {
           "101": {
             "switch_ports": {
@@ -175,7 +186,7 @@
     "neutron": {
       "crowbar-revision": 0,
       "crowbar-applied": false,
-      "schema-revision": 113,
+      "schema-revision": 117,
       "element_states": {
         "neutron-server": [ "readying", "ready", "applying" ],
         "neutron-network": [ "readying", "ready", "applying" ]
